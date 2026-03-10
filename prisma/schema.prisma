@@ -1,0 +1,317 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ── EMPRESA ──────────────────────────────────────────────────────────────────
+model Company {
+  id        String   @id @default(cuid())
+  name      String
+  cnpj      String?  @unique
+  slug      String   @unique
+  logoUrl   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users       User[]
+  campaigns   Campaign[]
+  consultants ConsultantCompany[]
+  alerts      SectorAlert[]
+}
+
+// ── CONSULTOR (All Lives) ─────────────────────────────────────────────────────
+model Consultant {
+  id               String   @id @default(cuid())
+  name             String
+  email            String   @unique
+  password         String
+  totpSecret       String?
+  totpEnabled      Boolean  @default(false)
+  refreshTokenHash String?
+  failedAttempts   Int      @default(0)
+  lockedUntil      DateTime?
+  lastLoginAt      DateTime?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  companies ConsultantCompany[]
+}
+
+model ConsultantCompany {
+  id           String     @id @default(cuid())
+  consultant   Consultant @relation(fields: [consultantId], references: [id])
+  consultantId String
+  company      Company    @relation(fields: [companyId], references: [id])
+  companyId    String
+  role         String     @default("VIEWER")
+  createdAt    DateTime   @default(now())
+
+  @@unique([consultantId, companyId])
+}
+
+// ── USUÁRIO ───────────────────────────────────────────────────────────────────
+model User {
+  id       String  @id @default(cuid())
+  name     String?
+  email    String? @unique
+  password String?
+
+  cpfHash     String?  @unique
+  pin         String?
+  totpSecret  String?
+  totpEnabled Boolean  @default(false)
+
+  role     Role    @default(EMPLOYEE)
+  sector   String?
+  jobTitle String?
+
+  company   Company? @relation(fields: [companyId], references: [id])
+  companyId String?
+
+  refreshTokenHash String?
+  lastLoginAt      DateTime?
+  failedAttempts   Int       @default(0)
+  lockedUntil      DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  responses    Response[]
+  participants CampaignParticipant[]
+  invites      CampaignInvite[]
+  comments     TopicComment[]
+}
+
+enum Role {
+  SUPER_ADMIN
+  ADMIN
+  HR
+  MANAGER
+  EMPLOYEE
+}
+
+// ── CAMPANHA ──────────────────────────────────────────────────────────────────
+model Campaign {
+  id          String         @id @default(cuid())
+  title       String
+  description String?
+  status      CampaignStatus @default(DRAFT)
+  startDate   DateTime?
+  endDate     DateTime?
+  slug        String         @unique @default(cuid())
+
+  company   Company @relation(fields: [companyId], references: [id])
+  companyId String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  responses    Response[]
+  participants CampaignParticipant[]
+  invites      CampaignInvite[]
+  reports      CampaignReport[]
+  aiAnalyses   AiAnalysis[]
+  snapshots    CampaignSnapshot[]
+}
+
+enum CampaignStatus {
+  DRAFT
+  ACTIVE
+  CLOSED
+  ARCHIVED
+}
+
+// ── PARTICIPANTES ─────────────────────────────────────────────────────────────
+model CampaignParticipant {
+  id           String    @id @default(cuid())
+  campaign     Campaign  @relation(fields: [campaignId], references: [id])
+  campaignId   String
+  user         User      @relation(fields: [userId], references: [id])
+  userId       String
+  hasResponded Boolean   @default(false)
+  respondedAt  DateTime?
+  createdAt    DateTime  @default(now())
+
+  @@unique([campaignId, userId])
+}
+
+// ── CONVITES POR EMAIL ────────────────────────────────────────────────────────
+model CampaignInvite {
+  id         String       @id @default(cuid())
+  campaign   Campaign     @relation(fields: [campaignId], references: [id])
+  campaignId String
+  user       User?        @relation(fields: [userId], references: [id])
+  userId     String?
+  email      String
+  token      String       @unique @default(cuid())
+  status     InviteStatus @default(PENDING)
+  sentAt     DateTime?
+  openedAt   DateTime?
+  expiresAt  DateTime
+  createdAt  DateTime     @default(now())
+}
+
+enum InviteStatus {
+  PENDING
+  SENT
+  OPENED
+  RESPONDED
+  EXPIRED
+}
+
+// ── RESPOSTA ──────────────────────────────────────────────────────────────────
+model Response {
+  id         String    @id @default(cuid())
+  campaign   Campaign  @relation(fields: [campaignId], references: [id])
+  campaignId String
+  user       User?     @relation(fields: [userId], references: [id])
+  userId     String?
+  sector     String
+  jobTitle   String?
+  totalScore Float?
+  riskLevel  RiskLevel?
+  ipHash     String?
+  createdAt  DateTime  @default(now())
+
+  answers    Answer[]
+  scores     TopicScore[]
+  comments   TopicComment[]
+  aiAnalyses AiAnalysis[]
+
+  @@index([campaignId]) // fix #10
+}
+
+model Answer {
+  id         String   @id @default(cuid())
+  response   Response @relation(fields: [responseId], references: [id])
+  responseId String
+  topicId    Int
+  questionId Int
+  value      Int
+  createdAt  DateTime @default(now())
+
+  @@index([responseId]) // fix #10
+}
+
+model TopicScore {
+  id         String    @id @default(cuid())
+  response   Response  @relation(fields: [responseId], references: [id])
+  responseId String
+  topicId    Int
+  topicName  String
+  score      Float
+  riskLevel  RiskLevel
+  createdAt  DateTime  @default(now())
+
+  @@index([responseId]) // fix #10
+}
+
+enum RiskLevel {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+// ── COMENTÁRIOS POR TÓPICO ────────────────────────────────────────────────────
+model TopicComment {
+  id          String   @id @default(cuid())
+  response    Response @relation(fields: [responseId], references: [id])
+  responseId  String
+  user        User?    @relation(fields: [userId], references: [id])
+  userId      String?
+  topicId     Int
+  text        String
+  isAnonymous Boolean  @default(true)
+  createdAt   DateTime @default(now())
+}
+
+// ── HISTÓRICO TEMPORAL ────────────────────────────────────────────────────────
+model CampaignSnapshot {
+  id               String    @id @default(cuid())
+  campaign         Campaign  @relation(fields: [campaignId], references: [id])
+  campaignId       String
+  snapshotDate     DateTime  @default(now())
+  totalResponses   Int
+  overallScore     Float
+  riskLevel        RiskLevel
+  topicScoresJson  Json
+  sectorScoresJson Json
+  createdAt        DateTime  @default(now())
+
+  @@index([campaignId, snapshotDate])
+}
+
+// ── RELATÓRIOS PDF ────────────────────────────────────────────────────────────
+model CampaignReport {
+  id          String       @id @default(cuid())
+  campaign    Campaign     @relation(fields: [campaignId], references: [id])
+  campaignId  String
+  type        ReportType   @default(FULL)
+  status      ReportStatus @default(PENDING)
+  filePath    String?
+  fileSize    Int?
+  generatedBy String?
+  error       String?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+}
+
+enum ReportType {
+  FULL
+  SECTOR
+  EXECUTIVE
+  COMPARATIVE
+}
+
+enum ReportStatus {
+  PENDING
+  PROCESSING
+  DONE
+  ERROR
+}
+
+// ── ANÁLISE DE IA ─────────────────────────────────────────────────────────────
+model AiAnalysis {
+  id         String    @id @default(cuid())
+  campaign   Campaign  @relation(fields: [campaignId], references: [id])
+  campaignId String
+  response   Response? @relation(fields: [responseId], references: [id])
+  responseId String?
+  scope      AiScope   @default(CAMPAIGN)
+  prompt     String
+  result     String
+  model      String    @default("claude-sonnet-4-6")
+  tokens     Int?
+  createdAt  DateTime  @default(now())
+
+  @@index([campaignId])
+}
+
+enum AiScope {
+  CAMPAIGN
+  SECTOR
+  INDIVIDUAL
+}
+
+// ── ALERTAS ───────────────────────────────────────────────────────────────────
+model SectorAlert {
+  id         String    @id @default(cuid())
+  company    Company   @relation(fields: [companyId], references: [id])
+  companyId  String
+  campaignId String
+  sector     String
+  topicId    Int?
+  riskLevel  RiskLevel
+  score      Float
+  message    String
+  isRead     Boolean   @default(false)
+  readAt     DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@index([companyId, isRead])
+}
