@@ -9,6 +9,10 @@ import {
 const MAX_ATTEMPTS = 5;
 const LOCK_MINUTES = 15;
 
+// C-1: dummy hash para evitar timing attack quando email não existe
+// Gerado com bcrypt cost 12; nunca corresponde a nenhuma senha real
+const DUMMY_PASSWORD_HASH = "$2a$12$KIXdummyhashfortimingneutrality0000000000000000000000";
+
 function isSecure(req: NextRequest): boolean {
   return req.headers.get("x-forwarded-proto") === "https" ||
     req.nextUrl.protocol === "https:";
@@ -22,6 +26,11 @@ export async function POST(req: NextRequest) {
     }
 
     const consultant = await prisma.consultant.findUnique({ where: { email } });
+
+    // C-1: sempre executar bcrypt mesmo quando consultant não existe (evita timing attack)
+    const hashToVerify = consultant?.password ?? DUMMY_PASSWORD_HASH;
+    const ok = await bcrypt.compare(password, hashToVerify);
+
     if (!consultant) {
       return NextResponse.json({ error: "Credenciais inválidas" }, { status: 401 });
     }
@@ -35,20 +44,19 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const ok = await bcrypt.compare(password, consultant.password);
     if (!ok) {
-      // fix #4-equivalent for consultant — atomic increment
-      const updated = await prisma.consultant.update({
-        where: { id: consultant.id },
-        data: { failedAttempts: { increment: 1 } },
-        select: { failedAttempts: true },
-      });
-      if (updated.failedAttempts >= MAX_ATTEMPTS) {
-        await prisma.consultant.update({
+      // C-2: operação atômica — increment + lock condicional na mesma transação
+      const lockAt = new Date(Date.now() + LOCK_MINUTES * 60 * 1000);
+      await prisma.$transaction([
+        prisma.consultant.update({
           where: { id: consultant.id },
-          data: { lockedUntil: new Date(Date.now() + LOCK_MINUTES * 60 * 1000) },
-        });
-      }
+          data: { failedAttempts: { increment: 1 } },
+        }),
+        prisma.consultant.updateMany({
+          where: { id: consultant.id, failedAttempts: { gte: MAX_ATTEMPTS }, lockedUntil: null },
+          data: { lockedUntil: lockAt },
+        }),
+      ]);
       return NextResponse.json({ error: "Credenciais inválidas" }, { status: 401 });
     }
 
@@ -59,17 +67,18 @@ export async function POST(req: NextRequest) {
       }
       const totpOk = verifyTotp(totpToken, consultant.totpSecret!);
       if (!totpOk) {
-        const updated = await prisma.consultant.update({
-          where: { id: consultant.id },
-          data: { failedAttempts: { increment: 1 } },
-          select: { failedAttempts: true },
-        });
-        if (updated.failedAttempts >= MAX_ATTEMPTS) {
-          await prisma.consultant.update({
+        // C-2: mesmo padrão atômico para falha TOTP
+        const lockAt = new Date(Date.now() + LOCK_MINUTES * 60 * 1000);
+        await prisma.$transaction([
+          prisma.consultant.update({
             where: { id: consultant.id },
-            data: { lockedUntil: new Date(Date.now() + LOCK_MINUTES * 60 * 1000) },
-          });
-        }
+            data: { failedAttempts: { increment: 1 } },
+          }),
+          prisma.consultant.updateMany({
+            where: { id: consultant.id, failedAttempts: { gte: MAX_ATTEMPTS }, lockedUntil: null },
+            data: { lockedUntil: lockAt },
+          }),
+        ]);
         return NextResponse.json({ error: "Código TOTP inválido" }, { status: 401 });
       }
     }

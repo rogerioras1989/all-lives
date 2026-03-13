@@ -120,8 +120,9 @@ export default function DashboardPage() {
 
   const loadResults = useCallback(() => {
     if (!activeCampaignId) return;
+    // fix #17 — encodeURIComponent evita quebra de URL com setores contendo &, #, espaços, etc.
     const url = `/api/campaigns/${activeCampaignId}/results` +
-      (sector !== "all" ? `?sector=${sector}` : "");
+      (sector !== "all" ? `?sector=${encodeURIComponent(sector)}` : "");
     fetch(url)
       .then((r) => r.json())
       .then((d) => {
@@ -159,7 +160,7 @@ export default function DashboardPage() {
         body: JSON.stringify({ scope: sector !== "all" ? "SECTOR" : "CAMPAIGN", sector }),
       });
       const d = await res.json();
-      setAiResult(d.result || d.error);
+      setAiResult(d.analysis?.result || d.error);
     } finally {
       setAiLoading(false);
     }

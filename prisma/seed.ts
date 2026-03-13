@@ -7,8 +7,11 @@ import bcrypt from "bcryptjs";
 const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL! });
 const prisma = new PrismaClient({ adapter });
 
+// fix #4 — usar HMAC-SHA256 com CPF_HMAC_SECRET, idêntico ao auth.ts
 function hashCpf(cpf: string) {
-  return crypto.createHash("sha256").update(cpf.replace(/\D/g, "")).digest("hex");
+  const secret = process.env.CPF_HMAC_SECRET;
+  if (!secret) throw new Error("CPF_HMAC_SECRET não definida no .env");
+  return crypto.createHmac("sha256", secret).update(cpf.replace(/\D/g, "")).digest("hex");
 }
 
 async function main() {
@@ -48,12 +51,12 @@ async function main() {
   });
   console.log("✅ Consultant:", consultant.email);
 
-  // User ADMIN demo
+  // User ADMIN demo — upsert por id para evitar conflito ao trocar hash
   const adminCpfHash = hashCpf("00000000000");
   const adminPinHash = await bcrypt.hash("123456", 12);
   const admin = await prisma.user.upsert({
-    where: { cpfHash: adminCpfHash },
-    update: {},
+    where: { id: "user-admin-demo" },
+    update: { cpfHash: adminCpfHash, pin: adminPinHash },
     create: {
       id: "user-admin-demo",
       name: "Admin Demo",
@@ -72,8 +75,8 @@ async function main() {
   const empCpfHash = hashCpf("11111111111");
   const empPinHash = await bcrypt.hash("654321", 12);
   await prisma.user.upsert({
-    where: { cpfHash: empCpfHash },
-    update: {},
+    where: { id: "user-emp-demo" },
+    update: { cpfHash: empCpfHash, pin: empPinHash },
     create: {
       id: "user-emp-demo",
       name: "Funcionário Demo",

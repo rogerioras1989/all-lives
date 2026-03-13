@@ -11,6 +11,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
+    // fix #14 — usar _count para totalUsers (evita carregar todos os IDs) + limitar campanhas
     const links = await prisma.consultantCompany.findMany({
       where: { consultantId: payload.sub },
       include: {
@@ -19,8 +20,9 @@ export async function GET(req: NextRequest) {
             campaigns: {
               select: { id: true, title: true, status: true, slug: true, createdAt: true },
               orderBy: { createdAt: "desc" },
+              take: 20,
             },
-            users: { select: { id: true } },
+            _count: { select: { users: true } },
           },
         },
       },
@@ -32,7 +34,7 @@ export async function GET(req: NextRequest) {
       cnpj: l.company.cnpj,
       slug: l.company.slug,
       role: l.role,
-      totalUsers: l.company.users.length,
+      totalUsers: l.company._count.users,
       campaigns: l.company.campaigns,
     }));
 

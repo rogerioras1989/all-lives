@@ -44,6 +44,7 @@ function QuestionarioInner() {
     scores: { topicId: number; topicName: string; score: number; riskLevel: string }[];
   } | null>(null);
   const [submitting, setSubmitting]   = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const [slideDir, setSlideDir]       = useState<"right"|"left">("right");
   const [animKey, setAnimKey]         = useState(0);
   const topRef = useRef<HTMLDivElement>(null);
@@ -85,7 +86,12 @@ function QuestionarioInner() {
   };
 
   const handleFinish = async () => {
+    if (!CAMPAIGN_ID) {
+      setSubmitError("Link inválido: campanha não identificada. Use o QR Code ou link fornecido pela empresa.");
+      return;
+    }
     setSubmitting(true);
+    setSubmitError(null);
     const formatted = Object.entries(answers).map(([k, v]) => {
       const [topicId, questionId] = k.split("-").map(Number);
       return { topicId, questionId, value: v };
@@ -95,10 +101,18 @@ function QuestionarioInner() {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ campaignId: CAMPAIGN_ID, sector, jobTitle, answers: formatted, comments }),
       });
-      setResult(await res.json());
+      const data = await res.json();
+      if (!res.ok) {
+        setSubmitError(data.error ?? "Erro ao enviar respostas. Tente novamente.");
+        return;
+      }
+      setResult(data);
       setStep("done");
-    } catch { alert("Erro ao enviar. Tente novamente."); }
-    finally { setSubmitting(false); }
+    } catch {
+      setSubmitError("Erro de conexão. Verifique sua internet e tente novamente.");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const isFirst = currentTopic === 0 && currentQ === 0;
@@ -431,12 +445,17 @@ function QuestionarioInner() {
                       </svg>
                     </button>
                   ) : (
-                    <button onClick={handleFinish} disabled={submitting} className="btn-green flex items-center gap-1.5 px-5 py-2.5 text-sm">
-                      {submitting ? "Enviando..." : "Finalizar"}
-                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                      </svg>
-                    </button>
+                    <>
+                      {submitError && (
+                        <span className="text-xs text-red-600 text-right max-w-[200px] leading-tight">{submitError}</span>
+                      )}
+                      <button onClick={handleFinish} disabled={submitting} className="btn-green flex items-center gap-1.5 px-5 py-2.5 text-sm">
+                        {submitting ? "Enviando..." : "Finalizar"}
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                        </svg>
+                      </button>
+                    </>
                   )
                 ) : answers[answerKey] !== undefined && !isLast ? (
                   <button onClick={goNextQ}
@@ -523,13 +542,18 @@ function QuestionarioInner() {
                     </svg>
                   </button>
                 ) : (
-                  <button onClick={allAnsweredInTopic ? handleFinish : undefined} disabled={!allAnsweredInTopic || submitting}
-                    className="btn-green flex items-center gap-1.5 px-5 py-2.5 text-sm">
-                    {submitting ? "Enviando..." : "Finalizar"}
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                    </svg>
-                  </button>
+                  <>
+                    {submitError && (
+                      <span className="text-xs text-red-600 text-right max-w-[200px] leading-tight">{submitError}</span>
+                    )}
+                    <button onClick={allAnsweredInTopic ? handleFinish : undefined} disabled={!allAnsweredInTopic || submitting}
+                      className="btn-green flex items-center gap-1.5 px-5 py-2.5 text-sm">
+                      {submitting ? "Enviando..." : "Finalizar"}
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                      </svg>
+                    </button>
+                  </>
                 )}
               </div>
             </div>

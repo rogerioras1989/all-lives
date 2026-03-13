@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import bcrypt from "bcryptjs";
 import {
   hashCpf, verifyPin, verifyTotp,
   signAccessToken, signRefreshToken,
@@ -8,6 +9,10 @@ import {
 
 const MAX_ATTEMPTS = 5;
 const LOCK_MINUTES = 15;
+
+// fix #9 — hash dummy constante para uso quando usuário não existe (evita timing attack)
+// Pré-gerado com bcrypt cost 12; nunca corresponde a nenhum PIN real
+const DUMMY_PIN_HASH = "$2a$12$dummyhashfortimingneutralityXXXXXXXXXXXXXXXXXXXXXX";
 
 function isSecure(req: NextRequest): boolean {
   return req.headers.get("x-forwarded-proto") === "https" ||
@@ -25,6 +30,10 @@ export async function POST(req: NextRequest) {
     const cpfHash = hashCpf(cpf);
     const user = await prisma.user.findUnique({ where: { cpfHash } });
 
+    // fix #9 — sempre executar bcrypt mesmo quando usuário não existe (evita timing attack)
+    const hashToVerify = user?.pin ?? DUMMY_PIN_HASH;
+    const pinOk = await bcrypt.compare(pin, hashToVerify);
+
     if (!user || !user.pin) {
       return NextResponse.json({ error: "Credenciais inválidas" }, { status: 401 });
     }
@@ -38,23 +47,20 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Verify PIN
-    const pinOk = await verifyPin(pin, user.pin);
+    // Verify PIN (resultado já computado acima)
     if (!pinOk) {
-      // fix #4 — atomic increment to avoid race condition
-      const updated = await prisma.user.update({
-        where: { id: user.id },
-        data: {
-          failedAttempts: { increment: 1 },
-        },
-        select: { failedAttempts: true },
-      });
-      if (updated.failedAttempts >= MAX_ATTEMPTS) {
-        await prisma.user.update({
+      // C-2: operação atômica — increment + lock condicional na mesma transação
+      const lockAt = new Date(Date.now() + LOCK_MINUTES * 60 * 1000);
+      await prisma.$transaction([
+        prisma.user.update({
           where: { id: user.id },
-          data: { lockedUntil: new Date(Date.now() + LOCK_MINUTES * 60 * 1000) },
-        });
-      }
+          data: { failedAttempts: { increment: 1 } },
+        }),
+        prisma.user.updateMany({
+          where: { id: user.id, failedAttempts: { gte: MAX_ATTEMPTS }, lockedUntil: null },
+          data: { lockedUntil: lockAt },
+        }),
+      ]);
       return NextResponse.json({ error: "Credenciais inválidas" }, { status: 401 });
     }
 
@@ -65,18 +71,18 @@ export async function POST(req: NextRequest) {
       }
       const ok = verifyTotp(totpToken, user.totpSecret!);
       if (!ok) {
-        // fix #6 — count TOTP failures too
-        const updated = await prisma.user.update({
-          where: { id: user.id },
-          data: { failedAttempts: { increment: 1 } },
-          select: { failedAttempts: true },
-        });
-        if (updated.failedAttempts >= MAX_ATTEMPTS) {
-          await prisma.user.update({
+        // C-2: mesmo padrão atômico para falha TOTP
+        const lockAt = new Date(Date.now() + LOCK_MINUTES * 60 * 1000);
+        await prisma.$transaction([
+          prisma.user.update({
             where: { id: user.id },
-            data: { lockedUntil: new Date(Date.now() + LOCK_MINUTES * 60 * 1000) },
-          });
-        }
+            data: { failedAttempts: { increment: 1 } },
+          }),
+          prisma.user.updateMany({
+            where: { id: user.id, failedAttempts: { gte: MAX_ATTEMPTS }, lockedUntil: null },
+            data: { lockedUntil: lockAt },
+          }),
+        ]);
         return NextResponse.json({ error: "Código TOTP inválido" }, { status: 401 });
       }
     }

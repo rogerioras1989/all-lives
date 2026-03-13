@@ -5,6 +5,16 @@ import { getTenantContext, requireCampaignOwnership, tenantError } from "@/lib/t
 
 const client = new Anthropic();
 
+const AI_COOLDOWN_MS = 5 * 60 * 1000; // 5 minutos entre análises por campanha/scope
+
+// C-3: sanitiza strings de usuário antes de interpolar no prompt IA
+function sanitizeForPrompt(str: string): string {
+  return str
+    .replace(/[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]/g, "") // remove control chars exceto \t \n \r
+    .replace(/\n{3,}/g, "\n\n")                          // colapsa múltiplas quebras
+    .slice(0, 200);                                       // limita tamanho
+}
+
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -15,6 +25,23 @@ export async function POST(
     await requireCampaignOwnership(id, ctx);
 
     const { scope = "CAMPAIGN", sector } = await req.json();
+
+    // fix #11 — rate limiting: verificar última análise do mesmo scope para esta campanha
+    const lastAnalysis = await prisma.aiAnalysis.findFirst({
+      where: { campaignId: id, scope: scope as "CAMPAIGN" | "SECTOR" | "INDIVIDUAL" },
+      orderBy: { createdAt: "desc" },
+      select: { createdAt: true },
+    });
+    if (lastAnalysis) {
+      const elapsed = Date.now() - lastAnalysis.createdAt.getTime();
+      if (elapsed < AI_COOLDOWN_MS) {
+        const waitSecs = Math.ceil((AI_COOLDOWN_MS - elapsed) / 1000);
+        return NextResponse.json(
+          { error: `Aguarde ${waitSecs}s antes de gerar nova análise para este escopo.` },
+          { status: 429 }
+        );
+      }
+    }
 
     const campaign = await prisma.campaign.findUnique({
       where: { id },
@@ -52,9 +79,17 @@ export async function POST(
       if (r.riskLevel) riskCounts[r.riskLevel]++;
     }
 
+    // C-3: sanitizar todos os valores controlados pelo usuário antes de interpolar
+    const safeTitle = sanitizeForPrompt(campaign.title);
+    const safeSector = sector ? sanitizeForPrompt(sector) : "";
+    const safeTopicSummary = topicSummary.map((t) => ({
+      ...t,
+      topic: sanitizeForPrompt(t.topic),
+    }));
+
     const contextStr = scope === "SECTOR"
-      ? `Setor: ${sector} | Respostas: ${responses.length}`
-      : `Campanha: "${campaign.title}" | Total de respostas: ${responses.length}`;
+      ? `Setor: <sector>${safeSector}</sector> | Respostas: ${responses.length}`
+      : `Campanha: <title>${safeTitle}</title> | Total de respostas: ${responses.length}`;
 
     const prompt = `Você é um especialista em saúde ocupacional e riscos psicossociais conforme a NR-01 brasileira.
 
@@ -68,7 +103,7 @@ Contexto: ${contextStr}
 Distribuição de risco: ${JSON.stringify(riskCounts)}
 
 Scores por tópico:
-${topicSummary.map((t) => `- ${t.topic}: média ${t.avgScore} (${t.count} avaliações)`).join("\n")}
+${safeTopicSummary.map((t) => `- ${t.topic}: média ${t.avgScore} (${t.count} avaliações)`).join("\n")}
 
 Responda em português brasileiro, de forma objetiva e prática para o departamento de RH.`;
 
@@ -92,7 +127,8 @@ Responda em português brasileiro, de forma objetiva e prática para o departame
       },
     });
 
-    return NextResponse.json({ analysis, result });
+    // A-7: não retornar result bruto — analysis já contém o campo result
+    return NextResponse.json({ analysis });
   } catch (err) {
     const { error, status } = tenantError(err);
     if (status !== 500) return NextResponse.json({ error }, { status });

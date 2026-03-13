@@ -13,13 +13,12 @@ export async function GET(
 
     const { searchParams } = new URL(req.url);
     const sector = searchParams.get("sector");
+    const responseWhere = { campaignId: id, ...(sector ? { sector } : {}) };
 
-    const responses = await prisma.response.findMany({
-      where: { campaignId: id, ...(sector ? { sector } : {}) },
-      include: { scores: true },
-    });
+    // fix #19 — usar aggregações em vez de carregar N×9 scores em memória
+    const totalResponses = await prisma.response.count({ where: responseWhere });
 
-    if (responses.length === 0) {
+    if (totalResponses === 0) {
       return NextResponse.json({
         totalResponses: 0,
         overallAverage: 0,
@@ -28,46 +27,49 @@ export async function GET(
       });
     }
 
-    const topicMap: Record<number, { topicId: number; topicName: string; scores: number[] }> = {};
-    for (const response of responses) {
-      for (const score of response.scores) {
-        if (!topicMap[score.topicId]) {
-          topicMap[score.topicId] = { topicId: score.topicId, topicName: score.topicName, scores: [] };
-        }
-        topicMap[score.topicId].scores.push(score.score);
-      }
-    }
+    const topicGroups = await prisma.topicScore.groupBy({
+      by: ["topicId", "topicName"],
+      where: { response: responseWhere },
+      _avg: { score: true },
+    });
 
-    const topicAverages = Object.values(topicMap).map((t) => ({
-      topicId: t.topicId,
-      topicName: t.topicName,
-      averageScore: t.scores.reduce((a, b) => a + b, 0) / t.scores.length,
-      riskDistribution: {
-        LOW: t.scores.filter((s) => s <= 25).length,
-        MEDIUM: t.scores.filter((s) => s > 25 && s <= 50).length,
-        HIGH: t.scores.filter((s) => s > 50 && s <= 75).length,
-        CRITICAL: t.scores.filter((s) => s > 75).length,
-      },
+    const topicAverages = await Promise.all(
+      topicGroups.map(async (g) => {
+        const [low, medium, high, critical] = await Promise.all([
+          prisma.topicScore.count({ where: { response: responseWhere, topicId: g.topicId, score: { lte: 25 } } }),
+          prisma.topicScore.count({ where: { response: responseWhere, topicId: g.topicId, score: { gt: 25, lte: 50 } } }),
+          prisma.topicScore.count({ where: { response: responseWhere, topicId: g.topicId, score: { gt: 50, lte: 75 } } }),
+          prisma.topicScore.count({ where: { response: responseWhere, topicId: g.topicId, score: { gt: 75 } } }),
+        ]);
+        return {
+          topicId: g.topicId,
+          topicName: g.topicName,
+          averageScore: g._avg.score ?? 0,
+          riskDistribution: { LOW: low, MEDIUM: medium, HIGH: high, CRITICAL: critical },
+        };
+      })
+    );
+
+    const sectorGroups = await prisma.response.groupBy({
+      by: ["sector"],
+      where: responseWhere,
+      _avg: { totalScore: true },
+      _count: { totalScore: true },
+    });
+
+    const sectorSummary = sectorGroups.map((g) => ({
+      sector: g.sector,
+      count: g._count.totalScore,
+      averageScore: g._avg.totalScore ?? 0,
     }));
 
-    const sectorMap: Record<string, { count: number; totalScore: number }> = {};
-    for (const r of responses) {
-      if (!sectorMap[r.sector]) sectorMap[r.sector] = { count: 0, totalScore: 0 };
-      sectorMap[r.sector].count++;
-      sectorMap[r.sector].totalScore += r.totalScore ?? 0;
-    }
+    const overallAgg = await prisma.response.aggregate({
+      where: responseWhere,
+      _avg: { totalScore: true },
+    });
+    const overallAverage = overallAgg._avg.totalScore ?? 0;
 
-    const sectorSummary = Object.entries(sectorMap).map(([s, data]) => ({
-      sector: s,
-      count: data.count,
-      averageScore: data.totalScore / data.count,
-    }));
-
-    const overallAverage =
-      responses.reduce((sum: number, r: { totalScore: number | null }) => sum + (r.totalScore ?? 0), 0) /
-      responses.length;
-
-    return NextResponse.json({ totalResponses: responses.length, overallAverage, topicAverages, sectorSummary });
+    return NextResponse.json({ totalResponses, overallAverage, topicAverages, sectorSummary });
   } catch (err) {
     const { error, status } = tenantError(err);
     return NextResponse.json({ error }, { status });

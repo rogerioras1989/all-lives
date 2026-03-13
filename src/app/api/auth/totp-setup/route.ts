@@ -9,6 +9,14 @@ export async function POST(req: NextRequest) {
     const user = await prisma.user.findUnique({ where: { id: payload.sub } });
     if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 });
 
+    // fix #10 — não permitir sobrescrever TOTP já habilitado
+    if (user.totpEnabled) {
+      return NextResponse.json(
+        { error: "2FA já está ativo. Desative antes de reconfigurar." },
+        { status: 409 }
+      );
+    }
+
     const email = user.email || user.id;
     const { secret, otpauthUrl } = generateTotpSecret(email);
     const qrCode = await generateQrCodeDataUrl(otpauthUrl);
@@ -19,7 +27,8 @@ export async function POST(req: NextRequest) {
       data: { totpSecret: encryptTotpSecret(secret), totpEnabled: false },
     });
 
-    return NextResponse.json({ qrCode, secret });
+    // fix #10 — não retornar o secret base32 em texto claro; apenas o QR code é suficiente
+    return NextResponse.json({ qrCode });
   } catch (err: unknown) {
     if (err instanceof Error && err.message === "UNAUTHORIZED") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

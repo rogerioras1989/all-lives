@@ -15,7 +15,12 @@ export async function GET(
     const ctx = await getTenantContext(req);
     const campaign = await requireCampaignOwnership(id, ctx);
 
-    const baseUrl = process.env.NEXTAUTH_URL || `http://${req.headers.get("host")}`;
+    // C-4: nunca usar Host header para construir URLs — open redirect via header injection
+    const baseUrl = process.env.NEXTAUTH_URL;
+    if (!baseUrl) {
+      console.error("[qrcode] NEXTAUTH_URL não configurado — impossível gerar QR seguro");
+      return NextResponse.json({ error: "Configuração de URL ausente" }, { status: 500 });
+    }
     const url = `${baseUrl}/r/${campaign.slug}`;
 
     const dataUrl = await qrcode.toDataURL(url, {

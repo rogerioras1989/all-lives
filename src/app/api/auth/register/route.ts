@@ -5,13 +5,30 @@ import { hashCpf, hashPin } from "@/lib/auth";
 // Registro de funcionário (pode ser protegido por admin em produção)
 export async function POST(req: NextRequest) {
   try {
-    const { cpf, pin, name, email, sector, jobTitle, companyId } = await req.json();
+    const body = await req.json();
+    // B-3: trim em todos os campos de texto para evitar dados inconsistentes
+    const cpf = typeof body.cpf === "string" ? body.cpf.trim() : body.cpf;
+    const pin = typeof body.pin === "string" ? body.pin.trim() : body.pin;
+    const name = typeof body.name === "string" ? body.name.trim() || undefined : body.name;
+    const email = typeof body.email === "string" ? body.email.trim().toLowerCase() || undefined : body.email;
+    const sector = typeof body.sector === "string" ? body.sector.trim() || undefined : body.sector;
+    const jobTitle = typeof body.jobTitle === "string" ? body.jobTitle.trim() || undefined : body.jobTitle;
+    const { companyId } = body;
 
     if (!cpf || !pin) {
       return NextResponse.json({ error: "CPF e PIN obrigatórios" }, { status: 400 });
     }
     if (pin.length !== 6 || !/^\d{6}$/.test(pin)) {
       return NextResponse.json({ error: "PIN deve ter 6 dígitos" }, { status: 400 });
+    }
+
+    // fix #18 — validar que companyId existe antes de criar o usuário
+    if (!companyId) {
+      return NextResponse.json({ error: "companyId é obrigatório" }, { status: 400 });
+    }
+    const company = await prisma.company.findUnique({ where: { id: companyId } });
+    if (!company) {
+      return NextResponse.json({ error: "Empresa não encontrada" }, { status: 404 });
     }
 
     const cpfHash = hashCpf(cpf);

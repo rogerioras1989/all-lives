@@ -90,7 +90,7 @@ export function verifyTotp(token: string, secret: string): boolean {
     secret: plainSecret,
     encoding: "base32",
     token,
-    window: 0, // fix #9 — exact time window only
+    window: 1, // A-2: window=1 aceita ±30s de clock skew (RFC 6238 recomendado)
   });
 }
 
@@ -124,6 +124,16 @@ export function verifyAccessToken(token: string): AccessTokenPayload {
 
 export function verifyRefreshToken(token: string): RefreshTokenPayload {
   return jwt.verify(token, getJwtSecret()) as RefreshTokenPayload;
+}
+
+// M-5: avisar em startup se NEXTAUTH_SECRET e JWT_SECRET são idênticos
+if (
+  typeof process !== "undefined" &&
+  process.env.NEXTAUTH_SECRET &&
+  process.env.JWT_SECRET &&
+  process.env.NEXTAUTH_SECRET === process.env.JWT_SECRET
+) {
+  console.warn("[auth] AVISO DE SEGURANÇA: NEXTAUTH_SECRET e JWT_SECRET são idênticos. Use valores distintos para limitar blast radius em caso de comprometimento.");
 }
 
 // fix #7 — cost 12 (was 10)
