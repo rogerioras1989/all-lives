@@ -17,10 +17,13 @@ model Company {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  users       User[]
-  campaigns   Campaign[]
-  consultants ConsultantCompany[]
-  alerts      SectorAlert[]
+  users         User[]
+  campaigns     Campaign[]
+  consultants   ConsultantCompany[]
+  alerts        SectorAlert[]
+  actionPlans   ActionPlan[]
+  auditLogs     AuditLog[]
+  hrIntegration HrIntegration?
 }
 
 // ── CONSULTOR (All Lives) ─────────────────────────────────────────────────────
@@ -116,6 +119,7 @@ model Campaign {
   reports      CampaignReport[]
   aiAnalyses   AiAnalysis[]
   snapshots    CampaignSnapshot[]
+  actionPlans  ActionPlan[]
 }
 
 enum CampaignStatus {
@@ -300,18 +304,79 @@ enum AiScope {
 
 // ── ALERTAS ───────────────────────────────────────────────────────────────────
 model SectorAlert {
-  id         String    @id @default(cuid())
-  company    Company   @relation(fields: [companyId], references: [id])
-  companyId  String
-  campaignId String
-  sector     String
-  topicId    Int?
-  riskLevel  RiskLevel
-  score      Float
-  message    String
-  isRead     Boolean   @default(false)
-  readAt     DateTime?
-  createdAt  DateTime  @default(now())
+  id             String    @id @default(cuid())
+  company        Company   @relation(fields: [companyId], references: [id])
+  companyId      String
+  campaignId     String
+  sector         String
+  topicId        Int?
+  riskLevel      RiskLevel
+  score          Float
+  message        String
+  isRead         Boolean   @default(false)
+  readAt         DateTime?
+  slaHours       Int?
+  acknowledgedAt DateTime?
+  resolvedAt     DateTime?
+  assignedTo     String?
+  createdAt      DateTime  @default(now())
 
   @@index([companyId, isRead])
+}
+
+// ── PLANO DE AÇÃO ─────────────────────────────────────────────────────────────
+model ActionPlan {
+  id          String           @id @default(cuid())
+  campaign    Campaign         @relation(fields: [campaignId], references: [id])
+  campaignId  String
+  company     Company          @relation(fields: [companyId], references: [id])
+  companyId   String
+  sector      String?
+  title       String
+  description String?
+  assignedTo  String?
+  dueDate     DateTime?
+  status      ActionPlanStatus @default(PENDING)
+  closedAt    DateTime?
+  createdBy   String?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  @@index([campaignId])
+  @@index([companyId])
+}
+
+enum ActionPlanStatus {
+  PENDING
+  IN_PROGRESS
+  DONE
+  CANCELLED
+}
+
+// ── AUDITORIA ─────────────────────────────────────────────────────────────────
+model AuditLog {
+  id              String   @id @default(cuid())
+  company         Company  @relation(fields: [companyId], references: [id])
+  companyId       String
+  action          String
+  entityType      String
+  entityId        String?
+  performedBy     String
+  performedByType String   @default("User")
+  metadata        Json?
+  createdAt       DateTime @default(now())
+
+  @@index([companyId, createdAt])
+}
+
+// ── INTEGRAÇÃO RH ─────────────────────────────────────────────────────────────
+model HrIntegration {
+  id         String    @id @default(cuid())
+  company    Company   @relation(fields: [companyId], references: [id])
+  companyId  String    @unique
+  apiKey     String    @unique @default(cuid())
+  lastSyncAt DateTime?
+  syncLog    Json?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
 }

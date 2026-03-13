@@ -272,6 +272,7 @@ export default function DashboardPage() {
           <div className="flex items-center gap-3">
             <Image src="https://all-livesocupacional.com.br/wp-content/uploads/2025/01/AllLivesPreferencial-copiar.png.webp" alt="All Lives" width={110} height={35} className="object-contain" unoptimized />
             {me?.company && <span className="text-xs font-semibold px-2.5 py-1 rounded-full hidden sm:inline" style={{ background: "rgba(91,158,201,0.1)", color: "#1e5f7a" }}>{me.company.name}</span>}
+            {me?.role === "MANAGER" && <span className="text-xs font-semibold px-2.5 py-1 rounded-full hidden sm:inline" style={{ background: "rgba(245,158,11,0.12)", color: "#b45309" }}>Gestor — visão restrita ao setor</span>}
           </div>
           <div className="flex items-center gap-2 flex-wrap">
             {activeCampaignId && (
@@ -295,6 +296,7 @@ export default function DashboardPage() {
                 <a href={`/api/campaigns/${activeCampaignId}/pdf`} target="_blank" className="btn-ghost text-xs px-3 py-2 flex items-center gap-1.5">📄 PDF</a>
               </>
             )}
+            <Link href="/portal" className="btn-ghost text-xs px-3 py-2">🌱 Portal</Link>
             <button onClick={handleLogout} className="btn-ghost text-xs px-3 py-2" style={{ color: "#7a9aaa" }}>Sair</button>
           </div>
         </div>

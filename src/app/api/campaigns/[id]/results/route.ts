@@ -11,8 +11,15 @@ export async function GET(
     const ctx = await getTenantContext(req);
     await requireCampaignOwnership(id, ctx);
 
+    // Feature 6: MANAGER sees only their own sector
+    let managerSector: string | undefined;
+    if (ctx.type === "user" && ctx.role === "MANAGER") {
+      const user = await prisma.user.findUnique({ where: { id: ctx.userId }, select: { sector: true } });
+      managerSector = user?.sector ?? undefined;
+    }
+
     const { searchParams } = new URL(req.url);
-    const sector = searchParams.get("sector");
+    const sector = managerSector ?? searchParams.get("sector") ?? undefined;
     const startDate = searchParams.get("startDate");
     const endDate = searchParams.get("endDate");
     const responseWhere = {
