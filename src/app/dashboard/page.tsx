@@ -454,7 +454,8 @@ export default function DashboardPage() {
                           <CartesianGrid strokeDasharray="3 3" stroke="rgba(91,158,201,0.15)" />
                           <XAxis dataKey="name" tick={{ fontSize: 9, fill: "#7a9aaa" }} />
                           <YAxis domain={[0, 100]} tick={{ fontSize: 9, fill: "#7a9aaa" }} />
-                          <Tooltip formatter={(v: unknown, _: unknown, p: { payload: { fullName: string } }) => [`${v}%`, p.payload.fullName]} contentStyle={{ borderRadius: 12, fontSize: 11 }} />
+                          {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                          <Tooltip formatter={(v: any, _: any, p: any) => [`${v}%`, p.payload.fullName]} contentStyle={{ borderRadius: 12, fontSize: 11 }} />
                           <Bar dataKey="score" radius={[4, 4, 0, 0]}>{barData.map((e, i) => <Cell key={i} fill={e.fill} />)}</Bar>
                         </BarChart>
                       </ResponsiveContainer>
@@ -467,7 +468,8 @@ export default function DashboardPage() {
                           <CartesianGrid strokeDasharray="3 3" stroke="rgba(91,158,201,0.15)" />
                           <XAxis dataKey="name" tick={{ fontSize: 9, fill: "#7a9aaa" }} />
                           <YAxis domain={[0, 100]} tick={{ fontSize: 9, fill: "#7a9aaa" }} />
-                          <Tooltip formatter={(v: unknown, _: unknown, p: { payload: { fullName: string } }) => [`${v}%`, p.payload.fullName]} contentStyle={{ borderRadius: 12, fontSize: 11 }} />
+                          {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                          <Tooltip formatter={(v: any, _: any, p: any) => [`${v}%`, p.payload.fullName]} contentStyle={{ borderRadius: 12, fontSize: 11 }} />
                           <Bar dataKey="score" radius={[4, 4, 0, 0]}>{compareBarData.map((e, i) => <Cell key={i} fill={e.fill} />)}</Bar>
                         </BarChart>
                       </ResponsiveContainer>
@@ -479,7 +481,8 @@ export default function DashboardPage() {
                       <CartesianGrid strokeDasharray="3 3" stroke="rgba(91,158,201,0.15)" />
                       <XAxis dataKey="name" tick={{ fontSize: 10, fill: "#7a9aaa" }} />
                       <YAxis domain={[0, 100]} tick={{ fontSize: 10, fill: "#7a9aaa" }} />
-                      <Tooltip formatter={(v: unknown, _: unknown, p: { payload: { fullName: string } }) => [`${v}%`, p.payload.fullName]} contentStyle={{ borderRadius: 12, border: "1px solid rgba(91,158,201,0.2)", fontSize: 12 }} />
+                      {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                  <Tooltip formatter={(v: any, _: any, p: any) => [`${v}%`, p.payload.fullName]} contentStyle={{ borderRadius: 12, border: "1px solid rgba(91,158,201,0.2)", fontSize: 12 }} />
                       <Bar dataKey="score" radius={[6, 6, 0, 0]}>{barData.map((e, i) => <Cell key={i} fill={e.fill} />)}</Bar>
                     </BarChart>
                   </ResponsiveContainer>
