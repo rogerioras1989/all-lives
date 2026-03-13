@@ -13,7 +13,18 @@ export async function GET(
 
     const { searchParams } = new URL(req.url);
     const sector = searchParams.get("sector");
-    const responseWhere = { campaignId: id, ...(sector ? { sector } : {}) };
+    const startDate = searchParams.get("startDate");
+    const endDate = searchParams.get("endDate");
+    const responseWhere = {
+      campaignId: id,
+      ...(sector ? { sector } : {}),
+      ...((startDate || endDate) ? {
+        createdAt: {
+          ...(startDate ? { gte: new Date(startDate) } : {}),
+          ...(endDate ? { lte: new Date(endDate + "T23:59:59.999Z") } : {}),
+        },
+      } : {}),
+    };
 
     // fix #19 — usar aggregações em vez de carregar N×9 scores em memória
     const totalResponses = await prisma.response.count({ where: responseWhere });

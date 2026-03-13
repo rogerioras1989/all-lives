@@ -97,11 +97,12 @@ export default function ConsultorPage() {
 
       <div className="max-w-5xl mx-auto px-6 pt-8">
         {/* Summary bar */}
-        <div className="grid grid-cols-3 gap-4 mb-8">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
           {[
             { icon: "🏢", value: companies.length, label: "Empresas" },
             { icon: "📋", value: companies.reduce((a, c) => a + c.campaigns.length, 0), label: "Campanhas" },
             { icon: "👥", value: companies.reduce((a, c) => a + c.totalUsers, 0), label: "Funcionários" },
+            { icon: "✅", value: companies.reduce((a, c) => a + c.campaigns.filter(x => x.status === "ACTIVE").length, 0), label: "Campanhas Ativas" },
           ].map((s) => (
             <div key={s.label} className="card-3d-sm p-5 text-center fade-up">
               <div className="text-2xl mb-1">{s.icon}</div>
@@ -109,6 +110,54 @@ export default function ConsultorPage() {
               <div className="text-xs font-medium mt-0.5" style={{ color: "#7a9aaa" }}>{s.label}</div>
             </div>
           ))}
+        </div>
+
+        {/* Health overview */}
+        <div className="card-3d-sm p-5 mb-8 fade-up">
+          <div className="flex items-center gap-2 mb-4">
+            <span className="text-lg">🩺</span>
+            <h2 className="text-sm font-semibold" style={{ color: "#1e3a4a" }}>Visão Geral de Saúde</h2>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            {[
+              {
+                label: "Com campanha ativa",
+                value: companies.filter((c) => c.campaigns.some((x) => x.status === "ACTIVE")).length,
+                total: companies.length,
+                color: "#5baa6d",
+                bg: "rgba(91,170,109,0.08)",
+              },
+              {
+                label: "Sem campanha",
+                value: companies.filter((c) => c.campaigns.length === 0).length,
+                total: companies.length,
+                color: "#9ca3af",
+                bg: "rgba(107,114,128,0.08)",
+              },
+              {
+                label: "Campanhas encerradas",
+                value: companies.reduce((a, c) => a + c.campaigns.filter(x => x.status === "CLOSED").length, 0),
+                total: companies.reduce((a, c) => a + c.campaigns.length, 0),
+                color: "#f59e0b",
+                bg: "rgba(245,158,11,0.08)",
+              },
+              {
+                label: "Total de funcionários",
+                value: companies.reduce((a, c) => a + c.totalUsers, 0),
+                total: null,
+                color: "#2e7fa3",
+                bg: "rgba(46,127,163,0.08)",
+              },
+            ].map((item) => (
+              <div key={item.label} className="rounded-xl p-4" style={{ background: item.bg, border: `1px solid ${item.color}22` }}>
+                <div className="text-xl font-bold mb-0.5" style={{ color: item.color }}>{item.value}</div>
+                <div className="text-xs" style={{ color: "#7a9aaa" }}>
+                  {item.label}
+                  {item.total !== null && <span style={{ color: item.color }}> / {item.total}</span>}
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
 
         {/* Search */}
