@@ -1,7 +1,7 @@
 "use client";
 import { useState, useRef } from "react";
-import Link from "next/link";
 import { useParams } from "next/navigation";
+import { ConsultorTenantShell, useConsultorTenantData } from "@/components/ConsultorTenantShell";
 
 type ImportResult = {
   ok: boolean;
@@ -18,6 +18,8 @@ const CSV_TEMPLATE = `cpf,pin,nome,email,setor,cargo
 
 export default function ImportarPage() {
   const { id } = useParams<{ id: string }>();
+  const tenantData = useConsultorTenantData(id);
+  const { readOnly } = tenantData;
   const fileRef = useRef<HTMLInputElement>(null);
   const [file, setFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
@@ -34,7 +36,7 @@ export default function ImportarPage() {
   }
 
   async function handleUpload() {
-    if (!file) return;
+    if (!file || readOnly) return;
     setLoading(true);
     try {
       const form = new FormData();
@@ -61,23 +63,13 @@ export default function ImportarPage() {
   }
 
   return (
-    <main className="min-h-screen gradient-hero pb-16">
-      <header className="bg-white/70 backdrop-blur-md border-b border-white/60 sticky top-0 z-20"
-        style={{ boxShadow: "0 1px 12px rgba(30,95,122,0.08)" }}>
-        <div className="max-w-3xl mx-auto px-6 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Link href="/consultor" className="text-sm font-medium" style={{ color: "#2e7fa3" }}>
-              ← Empresas
-            </Link>
-            <span style={{ color: "#aac0cc" }}>/</span>
-            <span className="text-sm font-semibold" style={{ color: "#1e3a4a" }}>
-              Importar Funcionários
-            </span>
-          </div>
-        </div>
-      </header>
-
-      <div className="max-w-3xl mx-auto px-6 pt-8">
+    <ConsultorTenantShell
+      tenantId={id}
+      company={tenantData.company}
+      viewerRoleLabel={tenantData.viewerRoleLabel}
+      readOnly={tenantData.readOnly}
+    >
+      <div className="mx-auto max-w-3xl">
         <div className="mb-8 fade-up">
           <h1 className="text-2xl font-bold mb-2" style={{ color: "#1e3a4a" }}>
             Importar via CSV
@@ -86,6 +78,19 @@ export default function ImportarPage() {
             Cadastre múltiplos funcionários de uma vez. Os CPFs são automaticamente anonimizados.
           </p>
         </div>
+
+        {readOnly && (
+          <div className="card-3d-sm p-4 mb-6 fade-up flex items-start gap-3"
+            style={{ background: "rgba(245,158,11,0.08)", border: "1px solid rgba(245,158,11,0.18)" }}>
+            <span className="text-xl">🔒</span>
+            <div>
+              <p className="text-sm font-semibold" style={{ color: "#9a6700" }}>Importação bloqueada para analistas</p>
+              <p className="text-xs mt-1 leading-relaxed" style={{ color: "#7a6a4a" }}>
+                O layout do CSV permanece visível para consulta, mas apenas perfis com gestão do tenant podem subir novos colaboradores.
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* Template download */}
         <div className="card-3d-sm p-5 mb-6 fade-up">
@@ -114,25 +119,45 @@ export default function ImportarPage() {
           className="card-3d-sm mb-6 fade-up"
           onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
           onDragLeave={() => setDragOver(false)}
-          onDrop={(e) => { e.preventDefault(); setDragOver(false); const f = e.dataTransfer.files[0]; if (f) handleFile(f); }}
+          onDrop={(e) => {
+            e.preventDefault();
+            setDragOver(false);
+            if (readOnly) return;
+            const f = e.dataTransfer.files[0];
+            if (f) handleFile(f);
+          }}
         >
           <div
             className="m-1 rounded-xl border-2 border-dashed transition-all p-10 text-center cursor-pointer"
             style={{
-              borderColor: dragOver ? "#2e7fa3" : "rgba(91,158,201,0.3)",
-              background: dragOver ? "rgba(46,127,163,0.04)" : "transparent",
+              borderColor: readOnly ? "rgba(156,163,175,0.3)" : dragOver ? "#2e7fa3" : "rgba(91,158,201,0.3)",
+              background: readOnly ? "rgba(156,163,175,0.05)" : dragOver ? "rgba(46,127,163,0.04)" : "transparent",
+              cursor: readOnly ? "not-allowed" : "pointer",
             }}
-            onClick={() => fileRef.current?.click()}
+            onClick={() => { if (!readOnly) fileRef.current?.click(); }}
           >
             <input
               ref={fileRef}
               type="file"
               accept=".csv"
               className="hidden"
-              onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); }}
+              onChange={(e) => {
+                if (readOnly) return;
+                const f = e.target.files?.[0];
+                if (f) handleFile(f);
+              }}
             />
             <div className="text-4xl mb-3">📤</div>
-            {file ? (
+            {readOnly ? (
+              <>
+                <p className="text-sm font-semibold" style={{ color: "#5a6a75" }}>
+                  Upload indisponível em modo analítico
+                </p>
+                <p className="text-xs mt-1" style={{ color: "#8a99a4" }}>
+                  Perfis de leitura podem baixar o modelo, mas não anexar novos arquivos.
+                </p>
+              </>
+            ) : file ? (
               <>
                 <p className="text-sm font-semibold" style={{ color: "#1e3a4a" }}>{file.name}</p>
                 <p className="text-xs mt-1" style={{ color: "#7a9aaa" }}>
@@ -155,8 +180,9 @@ export default function ImportarPage() {
         {/* Upload button */}
         <button
           onClick={handleUpload}
-          disabled={!file || loading}
+          disabled={!file || loading || readOnly}
           className="btn-primary w-full mb-8"
+          style={{ opacity: !file || loading || readOnly ? 0.6 : 1 }}
         >
           {loading ? "Importando…" : "Importar Funcionários"}
         </button>
@@ -198,6 +224,6 @@ export default function ImportarPage() {
           </div>
         )}
       </div>
-    </main>
+    </ConsultorTenantShell>
   );
 }

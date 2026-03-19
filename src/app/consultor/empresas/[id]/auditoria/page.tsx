@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
-import Link from "next/link";
 import { useParams } from "next/navigation";
+import { ConsultorTenantShell } from "@/components/ConsultorTenantShell";
 
 type Log = {
   id: string;
@@ -80,20 +80,11 @@ export default function AuditoriaPage() {
   }
 
   return (
-    <main className="min-h-screen gradient-hero pb-16">
-      <header className="bg-white/70 backdrop-blur-md border-b border-white/60 sticky top-0 z-20"
-        style={{ boxShadow: "0 1px 12px rgba(30,95,122,0.08)" }}>
-        <div className="max-w-5xl mx-auto px-6 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Link href={`/consultor/empresas/${id}`} className="text-sm font-medium" style={{ color: "#2e7fa3" }}>← Painel</Link>
-            <span style={{ color: "#aac0cc" }}>/</span>
-            <span className="text-sm font-semibold" style={{ color: "#1e3a4a" }}>Trilha de Auditoria NR-01</span>
-          </div>
-          <button onClick={exportCSV} className="btn-ghost text-xs px-3 py-2">⬇ Exportar CSV</button>
-        </div>
-      </header>
-
-      <div className="max-w-5xl mx-auto px-6 pt-8">
+    <ConsultorTenantShell
+      tenantId={id}
+      actions={<button onClick={exportCSV} className="btn-ghost text-xs px-3 py-2">⬇ Exportar CSV</button>}
+    >
+      <div className="mx-auto max-w-5xl">
         <div className="card-3d-sm p-4 mb-6 fade-up flex items-start gap-3"
           style={{ background: "rgba(46,127,163,0.05)", border: "1px solid rgba(46,127,163,0.15)" }}>
           <span className="text-xl">🛡</span>
@@ -171,6 +162,6 @@ export default function AuditoriaPage() {
           )}
         </div>
       </div>
-    </main>
+    </ConsultorTenantShell>
   );
 }

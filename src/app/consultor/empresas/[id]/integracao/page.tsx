@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
-import Link from "next/link";
 import { useParams } from "next/navigation";
+import { ConsultorTenantShell, useConsultorTenantData } from "@/components/ConsultorTenantShell";
 
 type Integration = {
   id: string;
@@ -12,6 +12,8 @@ type Integration = {
 
 export default function IntegracaoPage() {
   const { id } = useParams<{ id: string }>();
+  const tenantData = useConsultorTenantData(id);
+  const { readOnly } = tenantData;
   const [integration, setIntegration] = useState<Integration | null>(null);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
@@ -25,6 +27,7 @@ export default function IntegracaoPage() {
   }, [id]);
 
   async function generateKey() {
+    if (readOnly) return;
     setGenerating(true);
     try {
       const res = await fetch(`/api/companies/${id}/integrations`, {
@@ -49,17 +52,13 @@ export default function IntegracaoPage() {
     : `/api/webhooks/hr/${id}`;
 
   return (
-    <main className="min-h-screen gradient-hero pb-16">
-      <header className="bg-white/70 backdrop-blur-md border-b border-white/60 sticky top-0 z-20"
-        style={{ boxShadow: "0 1px 12px rgba(30,95,122,0.08)" }}>
-        <div className="max-w-4xl mx-auto px-6 py-3 flex items-center gap-3">
-          <Link href={`/consultor/empresas/${id}`} className="text-sm font-medium" style={{ color: "#2e7fa3" }}>← Painel</Link>
-          <span style={{ color: "#aac0cc" }}>/</span>
-          <span className="text-sm font-semibold" style={{ color: "#1e3a4a" }}>Integração RH</span>
-        </div>
-      </header>
-
-      <div className="max-w-4xl mx-auto px-6 pt-8 space-y-6">
+    <ConsultorTenantShell
+      tenantId={id}
+      company={tenantData.company}
+      viewerRoleLabel={tenantData.viewerRoleLabel}
+      readOnly={tenantData.readOnly}
+    >
+      <div className="mx-auto max-w-4xl space-y-6">
         {/* Intro */}
         <div className="card-3d p-6 fade-up">
           <div className="flex items-start gap-3 mb-4">
@@ -72,6 +71,19 @@ export default function IntegracaoPage() {
             </div>
           </div>
         </div>
+
+        {readOnly && (
+          <div className="card-3d-sm p-4 fade-up flex items-start gap-3"
+            style={{ background: "rgba(245,158,11,0.08)", border: "1px solid rgba(245,158,11,0.18)" }}>
+            <span className="text-xl">🔒</span>
+            <div>
+              <p className="text-sm font-semibold" style={{ color: "#9a6700" }}>Gerenciamento bloqueado para analistas</p>
+              <p className="text-xs mt-1 leading-relaxed" style={{ color: "#7a6a4a" }}>
+                O endpoint, a chave atual e o histórico de sincronização continuam visíveis, mas a geração ou rotação da credencial fica restrita a consultores com permissão de gestão.
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* API Key */}
         <div className="card-3d-sm p-6 fade-up">
@@ -100,7 +112,7 @@ export default function IntegracaoPage() {
                 ) : (
                   <p className="text-xs" style={{ color: "#aac0cc" }}>Nenhuma sincronização realizada</p>
                 )}
-                <button onClick={generateKey} disabled={generating} className="text-xs" style={{ color: "#f97316" }}>
+                <button onClick={generateKey} disabled={generating || readOnly} className="text-xs" style={{ color: readOnly ? "#9ca3af" : "#f97316" }}>
                   {generating ? "Gerando…" : "🔄 Regenerar chave"}
                 </button>
               </div>
@@ -108,7 +120,7 @@ export default function IntegracaoPage() {
           ) : (
             <div>
               <p className="text-sm mb-4" style={{ color: "#7a9aaa" }}>Nenhuma integração configurada.</p>
-              <button onClick={generateKey} disabled={generating} className="btn-primary text-xs px-4 py-2">
+              <button onClick={generateKey} disabled={generating || readOnly} className="btn-primary text-xs px-4 py-2" style={{ opacity: readOnly ? 0.5 : 1 }}>
                 {generating ? "Gerando…" : "Gerar API Key"}
               </button>
             </div>
@@ -196,6 +208,6 @@ export default function IntegracaoPage() {
           </div>
         </div>
       </div>
-    </main>
+    </ConsultorTenantShell>
   );
 }

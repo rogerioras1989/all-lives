@@ -1,11 +1,11 @@
 "use client";
 import { useEffect, useState } from "react";
-import Link from "next/link";
 import { useParams, useSearchParams, useRouter } from "next/navigation";
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, ReferenceLine, Legend,
 } from "recharts";
+import { ConsultorTenantShell, useConsultorTenantData } from "@/components/ConsultorTenantShell";
 
 type Snapshot = {
   id: string;
@@ -76,13 +76,10 @@ export default function EmpresaDashboardPage() {
   const [showPlanForm, setShowPlanForm] = useState(false);
   const [planForm, setPlanForm] = useState({ title: "", description: "", sector: "", assignedTo: "", dueDate: "" });
   const [savingPlan, setSavingPlan] = useState(false);
-  const [viewerRole, setViewerRole] = useState("CONSULTANT");
+  const tenantData = useConsultorTenantData(id);
+  const { readOnly } = tenantData;
 
   useEffect(() => {
-    fetch("/api/me")
-      .then((r) => r.status === 200 ? r.json() : null)
-      .then((d) => { if (d?.type === "consultant" && d.role) setViewerRole(d.role); });
-
     fetch(`/api/campaigns/${campaignId}/snapshot`)
       .then((r) => r.json())
       .then((d) => { setSnapshots(d.snapshots ?? []); setSnapshotLoading(false); })
@@ -183,32 +180,35 @@ export default function EmpresaDashboardPage() {
     key: `T${t.topicId}`,
     name: t.topicName,
   })) ?? [];
-  const readOnly = viewerRole === "ANALYST";
 
   return (
-    <main className="min-h-screen gradient-hero pb-16">
-      <header className="bg-white/70 backdrop-blur-md border-b border-white/60 sticky top-0 z-20"
-        style={{ boxShadow: "0 1px 12px rgba(30,95,122,0.08)" }}>
-        <div className="max-w-5xl mx-auto px-6 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Link href="/consultor" className="text-sm font-medium" style={{ color: "#2e7fa3" }}>
-              ← Empresas
-            </Link>
-            <span style={{ color: "#aac0cc" }}>/</span>
-            <span className="text-sm font-semibold" style={{ color: "#1e3a4a" }}>Painel da Empresa</span>
+    <ConsultorTenantShell
+      tenantId={id}
+      company={tenantData.company}
+      viewerRoleLabel={tenantData.viewerRoleLabel}
+      readOnly={tenantData.readOnly}
+      actions={
+        <>
+          <a href={`/api/campaigns/${campaignId}/pdf`} target="_blank" className="btn-ghost text-xs px-3 py-2">📄 PDF</a>
+          <button onClick={takeSnapshot} disabled={takingSnapshot || readOnly} className="btn-primary text-xs px-3 py-2" style={{ opacity: readOnly ? 0.5 : 1 }}>
+            📸 {takingSnapshot ? "Salvando…" : "Snapshot"}
+          </button>
+        </>
+      }
+    >
+      <div className="mx-auto max-w-5xl">
+        {readOnly && (
+          <div className="card-3d-sm p-4 mb-6 fade-up flex items-start gap-3"
+            style={{ background: "rgba(245,158,11,0.08)", border: "1px solid rgba(245,158,11,0.18)" }}>
+            <span className="text-xl">👁</span>
+            <div>
+              <p className="text-sm font-semibold" style={{ color: "#9a6700" }}>Modo somente leitura</p>
+              <p className="text-xs mt-1 leading-relaxed" style={{ color: "#7a6a4a" }}>
+                Analistas All Lives podem consultar snapshots, alertas, comentários e planos, mas não podem alterar operações do tenant.
+              </p>
+            </div>
           </div>
-          <div className="flex gap-2 flex-wrap">
-            <Link href={`/consultor/empresas/${id}/auditoria`} className="btn-ghost text-xs px-3 py-2">📋 Auditoria</Link>
-            <Link href={`/consultor/empresas/${id}/integracao`} className="btn-ghost text-xs px-3 py-2">🔗 Integração RH</Link>
-            <a href={`/api/campaigns/${campaignId}/pdf`} target="_blank" className="btn-ghost text-xs px-3 py-2">📄 PDF</a>
-            <button onClick={takeSnapshot} disabled={takingSnapshot || readOnly} className="btn-primary text-xs px-3 py-2" style={{ opacity: readOnly ? 0.5 : 1 }}>
-              📸 {takingSnapshot ? "Salvando…" : "Snapshot"}
-            </button>
-          </div>
-        </div>
-      </header>
-
-      <div className="max-w-5xl mx-auto px-6 pt-8">
+        )}
         {/* Evolution chart */}
         <div className="card-3d-sm p-6 mb-8 fade-up">
           <div className="flex items-center justify-between mb-4">
@@ -483,6 +483,6 @@ export default function EmpresaDashboardPage() {
           )}
         </div>
       </div>
-    </main>
+    </ConsultorTenantShell>
   );
 }
