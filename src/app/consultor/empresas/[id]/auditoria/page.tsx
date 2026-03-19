@@ -22,6 +22,12 @@ const ACTION_ICON: Record<string, string> = {
   ALERT_ASSIGN: "👤",
   CAMPAIGN_CREATED: "🚀",
   CAMPAIGN_UPDATED: "🔄",
+  CAMPAIGN_CLONED: "🧬",
+  TENANT_CREATED: "🏢",
+  TENANT_UPDATED: "🛠",
+  CONSULTANT_LINK_CREATED: "🤝",
+  CONSULTANT_LINK_UPDATED: "🔐",
+  CONSULTANT_LINK_REMOVED: "🚪",
 };
 
 const ACTION_LABEL: Record<string, string> = {
@@ -32,6 +38,12 @@ const ACTION_LABEL: Record<string, string> = {
   ALERT_ASSIGN: "Alerta atribuído",
   CAMPAIGN_CREATED: "Campanha criada",
   CAMPAIGN_UPDATED: "Campanha atualizada",
+  CAMPAIGN_CLONED: "Campanha duplicada por template",
+  TENANT_CREATED: "Tenant criado",
+  TENANT_UPDATED: "Tenant atualizado",
+  CONSULTANT_LINK_CREATED: "Vínculo All Lives criado",
+  CONSULTANT_LINK_UPDATED: "Vínculo All Lives atualizado",
+  CONSULTANT_LINK_REMOVED: "Vínculo All Lives removido",
 };
 
 export default function AuditoriaPage() {

@@ -1,78 +1,24 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireAuth } from "@/lib/middleware";
 import { hashCpf, hashPin } from "@/lib/auth";
+import { recordAuditLog } from "@/lib/audit-log";
+import {
+  findSimilarCompany,
+  formatCnpj,
+  getSuggestedSlug,
+  isValidCnpj,
+  normalizeCnpj,
+  slugify,
+} from "@/lib/company-guardrails";
+import { requireConsultant } from "@/lib/consultor-auth";
+import { getConsultantCompanySummaries } from "@/lib/consultor-companies";
 
 export const dynamic = "force-dynamic";
 
-function slugify(value: string) {
-  return value
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-|-$/g, "")
-    .slice(0, 60);
-}
-
 export async function GET(req: NextRequest) {
   try {
-    const payload = requireAuth(req);
-
-    // Only consultants can call this
-    if (payload.type !== "consultant") {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
-
-    const companies = payload.role === "OWNER"
-      ? (await prisma.company.findMany({
-          orderBy: { name: "asc" },
-          include: {
-            campaigns: {
-              select: { id: true, title: true, status: true, slug: true, createdAt: true },
-              orderBy: { createdAt: "desc" },
-              take: 20,
-            },
-            _count: { select: { users: true, campaigns: true, alerts: true, actionPlans: true } },
-          },
-        })).map((company) => ({
-          id: company.id,
-          name: company.name,
-          cnpj: company.cnpj,
-          slug: company.slug,
-          role: "OWNER",
-          totalUsers: company._count.users,
-          totalCampaigns: company._count.campaigns,
-          totalAlerts: company._count.alerts,
-          totalActionPlans: company._count.actionPlans,
-          campaigns: company.campaigns,
-        }))
-      : (await prisma.consultantCompany.findMany({
-          where: { consultantId: payload.sub },
-          include: {
-            company: {
-              include: {
-                campaigns: {
-                  select: { id: true, title: true, status: true, slug: true, createdAt: true },
-                  orderBy: { createdAt: "desc" },
-                  take: 20,
-                },
-                _count: { select: { users: true, campaigns: true, alerts: true, actionPlans: true } },
-              },
-            },
-          },
-        })).map((l) => ({
-          id: l.company.id,
-          name: l.company.name,
-          cnpj: l.company.cnpj,
-          slug: l.company.slug,
-          role: l.role,
-          totalUsers: l.company._count.users,
-          totalCampaigns: l.company._count.campaigns,
-          totalAlerts: l.company._count.alerts,
-          totalActionPlans: l.company._count.actionPlans,
-          campaigns: l.company.campaigns,
-        }));
+    const payload = await requireConsultant(req);
+    const companies = await getConsultantCompanySummaries(payload);
 
     return NextResponse.json({
       companies,
@@ -88,10 +34,7 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const payload = requireAuth(req);
-    if (payload.type !== "consultant") {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
+    const payload = await requireConsultant(req);
     if (payload.role === "ANALYST") {
       return NextResponse.json({ error: "Analistas não podem cadastrar tenants" }, { status: 403 });
     }
@@ -109,14 +52,46 @@ export async function POST(req: NextRequest) {
     const adminPin = String(body.adminPin ?? "").trim();
     const adminSector = String(body.adminSector ?? "").trim() || "Recursos Humanos";
     const adminJobTitle = String(body.adminJobTitle ?? "").trim() || "Administrador do tenant";
+    const logoUrl = String(body.logoUrl ?? "").trim() || null;
 
     if (!companyName) {
       return NextResponse.json({ error: "Nome da empresa é obrigatório" }, { status: 400 });
     }
 
+    if (!isValidCnpj(cnpj)) {
+      return NextResponse.json({ error: "CNPJ inválido" }, { status: 400 });
+    }
+
     const baseSlug = slugify(slugInput || companyName);
     if (!baseSlug) {
       return NextResponse.json({ error: "Slug inválido" }, { status: 400 });
+    }
+
+    const existingCompanies = await prisma.company.findMany({
+      select: { id: true, name: true, slug: true, cnpj: true },
+    });
+
+    const similarCompany = findSimilarCompany(existingCompanies, companyName);
+    if (similarCompany) {
+      return NextResponse.json(
+        {
+          error: `Já existe uma empresa muito parecida na base: ${similarCompany.company.name}. Revise antes de cadastrar outro tenant.`,
+        },
+        { status: 409 }
+      );
+    }
+
+    const normalizedCnpj = normalizeCnpj(cnpj);
+    if (normalizedCnpj) {
+      const conflictingCnpj = existingCompanies.find(
+        (company) => normalizeCnpj(company.cnpj) === normalizedCnpj
+      );
+      if (conflictingCnpj) {
+        return NextResponse.json(
+          { error: `Já existe um tenant com esse CNPJ: ${conflictingCnpj.name}.` },
+          { status: 409 }
+        );
+      }
     }
 
     if (createInitialAdmin) {
@@ -132,20 +107,21 @@ export async function POST(req: NextRequest) {
     }
 
     const result = await prisma.$transaction(async (tx) => {
-      const slugConflicts = await tx.company.count({
-        where: {
-          slug: {
-            startsWith: baseSlug,
-          },
-        },
-      });
-      const finalSlug = slugConflicts === 0 ? baseSlug : `${baseSlug}-${slugConflicts + 1}`;
+      const existingSlugs = existingCompanies.map((company) => company.slug);
+      const finalSlug = slugInput
+        ? getSuggestedSlug(baseSlug, existingSlugs)
+        : getSuggestedSlug(baseSlug, existingSlugs);
+
+      if (slugInput && finalSlug !== baseSlug) {
+        throw new Error(`SLUG_CONFLICT:${finalSlug}`);
+      }
 
       const company = await tx.company.create({
         data: {
           name: companyName,
-          cnpj,
+          cnpj: formatCnpj(cnpj),
           slug: finalSlug,
+          logoUrl,
         },
       });
 
@@ -197,11 +173,34 @@ export async function POST(req: NextRequest) {
           })
         : null;
 
-      return { company, campaign, admin };
+      await recordAuditLog(tx, {
+        companyId: company.id,
+        action: "TENANT_CREATED",
+        entityType: "Company",
+        entityId: company.id,
+        performedBy: payload.sub,
+        metadata: {
+          companyName: company.name,
+          slug: company.slug,
+          hasInitialCampaign: Boolean(campaign),
+          hasInitialAdmin: Boolean(admin),
+        },
+      });
+
+      return { company, campaign, admin, suggestedSlug: finalSlug };
     });
 
     return NextResponse.json(result, { status: 201 });
   } catch (err: unknown) {
+    if (err instanceof Error && err.message.startsWith("SLUG_CONFLICT:")) {
+      return NextResponse.json(
+        {
+          error: "Slug já está em uso. Use outro valor ou aceite a sugestão automática.",
+          suggestedSlug: err.message.replace("SLUG_CONFLICT:", ""),
+        },
+        { status: 409 }
+      );
+    }
     if (
       err &&
       typeof err === "object" &&
@@ -213,8 +212,14 @@ export async function POST(req: NextRequest) {
         { status: 409 }
       );
     }
-    if (err instanceof Error && (err.message === "UNAUTHORIZED" || err.message === "FORBIDDEN")) {
-      return NextResponse.json({ error: err.message }, { status: err.message === "UNAUTHORIZED" ? 401 : 403 });
+    if (
+      err instanceof Error &&
+      ["UNAUTHORIZED", "FORBIDDEN", "FORBIDDEN_ROLE"].includes(err.message)
+    ) {
+      return NextResponse.json(
+        { error: err.message },
+        { status: err.message === "UNAUTHORIZED" ? 401 : 403 }
+      );
     }
     return NextResponse.json({ error: "Erro interno" }, { status: 500 });
   }

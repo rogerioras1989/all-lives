@@ -217,15 +217,71 @@ async function main() {
   });
   console.log("✅ Consultant:", consultant.email);
 
+  const operationsConsultant = await prisma.consultant.upsert({
+    where: { email: "operacoes@alllives.com.br" },
+    update: {},
+    create: {
+      id: "consultant-operations-demo",
+      name: "Consultor Operações",
+      email: "operacoes@alllives.com.br",
+      password: consultantPwHash,
+      globalRole: "CONSULTANT",
+    },
+  });
+
+  const analystConsultant = await prisma.consultant.upsert({
+    where: { email: "analyst@alllives.com.br" },
+    update: {},
+    create: {
+      id: "consultant-analyst-demo",
+      name: "Analista All Lives",
+      email: "analyst@alllives.com.br",
+      password: consultantPwHash,
+      globalRole: "ANALYST",
+    },
+  });
+
   for (const item of demoCompanies) {
     await seedCompany(item, consultant.id);
   }
+
+  await prisma.consultantCompany.upsert({
+    where: {
+      consultantId_companyId: {
+        consultantId: operationsConsultant.id,
+        companyId: "company-demo",
+      },
+    },
+    update: { role: "ADMIN" },
+    create: {
+      consultantId: operationsConsultant.id,
+      companyId: "company-demo",
+      role: "ADMIN",
+    },
+  });
+
+  await prisma.consultantCompany.upsert({
+    where: {
+      consultantId_companyId: {
+        consultantId: analystConsultant.id,
+        companyId: "company-industria-demo",
+      },
+    },
+    update: { role: "VIEWER" },
+    create: {
+      consultantId: analystConsultant.id,
+      companyId: "company-industria-demo",
+      role: "VIEWER",
+    },
+  });
 
   console.log("✅ Admin demo principal — CPF: 000.000.000-00 | PIN: 123456");
   console.log("✅ Employee demo principal — CPF: 111.111.111-11 | PIN: 654321");
   console.log("\n🎉 Seed concluído com sucesso!");
   console.log("   Acesse: http://localhost:3000");
   console.log("   Login consultor: consultor@alllives.com.br | Senha: consultor123");
+  console.log("   Login consultor operacional: operacoes@alllives.com.br | Senha: consultor123");
+  console.log("   Login analista: analyst@alllives.com.br | Senha: consultor123");
   console.log("   Login admin principal: CPF 000.000.000-00 | PIN 123456");
 }
 

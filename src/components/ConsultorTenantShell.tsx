@@ -8,16 +8,27 @@ type TenantCompany = {
   id: string;
   name: string;
   cnpj: string | null;
+  logoUrl?: string | null;
   totalUsers: number;
   totalCampaigns: number;
-  totalAlerts: number;
-  totalActionPlans: number;
+  totalResponses?: number;
+  unresolvedAlerts?: number;
+  openActionPlans?: number;
+  currentRiskLevel?: string | null;
+  healthStatus?: "HEALTHY" | "WATCH" | "CRITICAL";
+  healthReason?: string;
+  onboarding?: {
+    completedSteps: number;
+    totalSteps: number;
+    incomplete: boolean;
+  };
   campaigns?: {
     id: string;
     title: string;
     status: string;
     slug: string;
     createdAt: string;
+    responseCount?: number;
   }[];
 };
 
@@ -93,11 +104,14 @@ export function ConsultorTenantShell({
     const parts = [
       `${company.totalUsers} usuário(s)`,
       `${company.totalCampaigns} campanha(s)`,
-      `${company.totalAlerts} alerta(s)`,
-      `${company.totalActionPlans} plano(s)`,
+      `${company.unresolvedAlerts ?? 0} alerta(s)`,
+      `${company.openActionPlans ?? 0} plano(s)`,
     ];
 
     if (company.cnpj) parts.unshift(company.cnpj);
+    if (company.onboarding) {
+      parts.push(`onboarding ${company.onboarding.completedSteps}/${company.onboarding.totalSteps}`);
+    }
     return parts.join(" · ");
   }, [company]);
 
@@ -111,6 +125,7 @@ export function ConsultorTenantShell({
       nav={[
         { href: "/consultor", label: "Visão global", icon: "🌐" },
         { href: `/consultor/empresas/${tenantId}`, label: "Painel do tenant", icon: "🏢" },
+        { href: `/consultor/empresas/${tenantId}/gestao`, label: "Gestão", icon: "⚙️", disabled: readOnly },
         { href: `/consultor/empresas/${tenantId}/auditoria`, label: "Auditoria", icon: "📋" },
         { href: `/consultor/empresas/${tenantId}/integracao`, label: "Integração RH", icon: "🔗", disabled: readOnly },
         { href: `/consultor/empresas/${tenantId}/importar`, label: "Importar usuários", icon: "📤", disabled: readOnly },
