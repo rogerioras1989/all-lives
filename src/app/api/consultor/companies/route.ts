@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/middleware";
+import { hashCpf, hashPin } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
@@ -101,6 +102,13 @@ export async function POST(req: NextRequest) {
     const slugInput = String(body.slug ?? "").trim();
     const createInitialCampaign = body.createInitialCampaign !== false;
     const campaignTitle = String(body.campaignTitle ?? "").trim();
+    const createInitialAdmin = body.createInitialAdmin !== false;
+    const adminName = String(body.adminName ?? "").trim();
+    const adminEmail = String(body.adminEmail ?? "").trim().toLowerCase() || null;
+    const adminCpf = String(body.adminCpf ?? "").trim();
+    const adminPin = String(body.adminPin ?? "").trim();
+    const adminSector = String(body.adminSector ?? "").trim() || "Recursos Humanos";
+    const adminJobTitle = String(body.adminJobTitle ?? "").trim() || "Administrador do tenant";
 
     if (!companyName) {
       return NextResponse.json({ error: "Nome da empresa é obrigatório" }, { status: 400 });
@@ -109,6 +117,18 @@ export async function POST(req: NextRequest) {
     const baseSlug = slugify(slugInput || companyName);
     if (!baseSlug) {
       return NextResponse.json({ error: "Slug inválido" }, { status: 400 });
+    }
+
+    if (createInitialAdmin) {
+      if (!adminName) {
+        return NextResponse.json({ error: "Nome do admin inicial é obrigatório" }, { status: 400 });
+      }
+      if (adminCpf.replace(/\D/g, "").length !== 11) {
+        return NextResponse.json({ error: "CPF do admin inicial deve ter 11 dígitos" }, { status: 400 });
+      }
+      if (!/^\d{6}$/.test(adminPin)) {
+        return NextResponse.json({ error: "PIN do admin inicial deve ter 6 dígitos" }, { status: 400 });
+      }
     }
 
     const result = await prisma.$transaction(async (tx) => {
@@ -156,11 +176,43 @@ export async function POST(req: NextRequest) {
           })
         : null;
 
-      return { company, campaign };
+      const admin = createInitialAdmin
+        ? await tx.user.create({
+            data: {
+              name: adminName,
+              email: adminEmail,
+              cpfHash: hashCpf(adminCpf),
+              pin: await hashPin(adminPin),
+              role: "ADMIN",
+              sector: adminSector,
+              jobTitle: adminJobTitle,
+              companyId: company.id,
+            },
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              role: true,
+            },
+          })
+        : null;
+
+      return { company, campaign, admin };
     });
 
     return NextResponse.json(result, { status: 201 });
   } catch (err: unknown) {
+    if (
+      err &&
+      typeof err === "object" &&
+      "code" in err &&
+      err.code === "P2002"
+    ) {
+      return NextResponse.json(
+        { error: "Já existe empresa, e-mail ou CPF com esses dados." },
+        { status: 409 }
+      );
+    }
     if (err instanceof Error && (err.message === "UNAUTHORIZED" || err.message === "FORBIDDEN")) {
       return NextResponse.json({ error: err.message }, { status: err.message === "UNAUTHORIZED" ? 401 : 403 });
     }

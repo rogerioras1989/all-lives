@@ -74,6 +74,13 @@ export default function ConsultorPage() {
     slug: "",
     createInitialCampaign: true,
     campaignTitle: "",
+    createInitialAdmin: true,
+    adminName: "",
+    adminEmail: "",
+    adminCpf: "",
+    adminPin: "",
+    adminSector: "Recursos Humanos",
+    adminJobTitle: "Administrador do tenant",
   });
 
   useEffect(() => {
@@ -140,6 +147,13 @@ export default function ConsultorPage() {
         slug: "",
         createInitialCampaign: true,
         campaignTitle: "",
+        createInitialAdmin: true,
+        adminName: "",
+        adminEmail: "",
+        adminCpf: "",
+        adminPin: "",
+        adminSector: "Recursos Humanos",
+        adminJobTitle: "Administrador do tenant",
       });
 
       router.push(
@@ -254,6 +268,93 @@ export default function ConsultorPage() {
                 />
                 Criar campanha inicial em rascunho
               </label>
+              <label className="flex items-center gap-3 rounded-2xl border px-4 py-3 text-sm lg:col-span-2"
+                style={{ borderColor: "rgba(91,170,109,0.18)", background: "rgba(91,170,109,0.05)", color: "#1e3a4a" }}>
+                <input
+                  type="checkbox"
+                  checked={createForm.createInitialAdmin}
+                  onChange={(event) => setCreateForm((current) => ({ ...current, createInitialAdmin: event.target.checked }))}
+                />
+                Criar admin inicial da empresa
+              </label>
+
+              {createForm.createInitialAdmin && (
+                <>
+                  <div className="lg:col-span-2 rounded-2xl border px-4 py-4"
+                    style={{ borderColor: "rgba(91,170,109,0.18)", background: "rgba(91,170,109,0.04)" }}>
+                    <p className="text-xs font-semibold uppercase tracking-[0.12em]" style={{ color: "#3d8a50" }}>
+                      Admin inicial do tenant
+                    </p>
+                    <p className="mt-1 text-xs" style={{ color: "#5a7a8a" }}>
+                      Esse usuário poderá entrar em `/login` e operar o dashboard da empresa.
+                    </p>
+                  </div>
+                  <label className="text-xs font-medium" style={{ color: "#5a7a8a" }}>
+                    Nome do admin
+                    <input
+                      type="text"
+                      value={createForm.adminName}
+                      onChange={(event) => setCreateForm((current) => ({ ...current, adminName: event.target.value }))}
+                      className="mt-1 w-full rounded-xl border px-4 py-2 text-sm outline-none"
+                      style={{ borderColor: "rgba(91,158,201,0.25)", background: "white", color: "#1e3a4a" }}
+                      placeholder="Ex.: Paula RH"
+                    />
+                  </label>
+                  <label className="text-xs font-medium" style={{ color: "#5a7a8a" }}>
+                    E-mail do admin
+                    <input
+                      type="email"
+                      value={createForm.adminEmail}
+                      onChange={(event) => setCreateForm((current) => ({ ...current, adminEmail: event.target.value }))}
+                      className="mt-1 w-full rounded-xl border px-4 py-2 text-sm outline-none"
+                      style={{ borderColor: "rgba(91,158,201,0.25)", background: "white", color: "#1e3a4a" }}
+                      placeholder="Opcional"
+                    />
+                  </label>
+                  <label className="text-xs font-medium" style={{ color: "#5a7a8a" }}>
+                    CPF do admin
+                    <input
+                      type="text"
+                      value={createForm.adminCpf}
+                      onChange={(event) => setCreateForm((current) => ({ ...current, adminCpf: event.target.value }))}
+                      className="mt-1 w-full rounded-xl border px-4 py-2 text-sm outline-none"
+                      style={{ borderColor: "rgba(91,158,201,0.25)", background: "white", color: "#1e3a4a" }}
+                      placeholder="000.000.000-00"
+                    />
+                  </label>
+                  <label className="text-xs font-medium" style={{ color: "#5a7a8a" }}>
+                    PIN inicial
+                    <input
+                      type="text"
+                      value={createForm.adminPin}
+                      onChange={(event) => setCreateForm((current) => ({ ...current, adminPin: event.target.value }))}
+                      className="mt-1 w-full rounded-xl border px-4 py-2 text-sm outline-none"
+                      style={{ borderColor: "rgba(91,158,201,0.25)", background: "white", color: "#1e3a4a" }}
+                      placeholder="6 dígitos"
+                    />
+                  </label>
+                  <label className="text-xs font-medium" style={{ color: "#5a7a8a" }}>
+                    Setor
+                    <input
+                      type="text"
+                      value={createForm.adminSector}
+                      onChange={(event) => setCreateForm((current) => ({ ...current, adminSector: event.target.value }))}
+                      className="mt-1 w-full rounded-xl border px-4 py-2 text-sm outline-none"
+                      style={{ borderColor: "rgba(91,158,201,0.25)", background: "white", color: "#1e3a4a" }}
+                    />
+                  </label>
+                  <label className="text-xs font-medium" style={{ color: "#5a7a8a" }}>
+                    Cargo
+                    <input
+                      type="text"
+                      value={createForm.adminJobTitle}
+                      onChange={(event) => setCreateForm((current) => ({ ...current, adminJobTitle: event.target.value }))}
+                      className="mt-1 w-full rounded-xl border px-4 py-2 text-sm outline-none"
+                      style={{ borderColor: "rgba(91,158,201,0.25)", background: "white", color: "#1e3a4a" }}
+                    />
+                  </label>
+                </>
+              )}
 
               {createError && (
                 <div className="rounded-2xl px-4 py-3 text-xs lg:col-span-2"
