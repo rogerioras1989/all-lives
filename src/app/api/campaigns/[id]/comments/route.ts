@@ -9,6 +9,8 @@ import {
 } from "@/lib/tenant";
 import { TOPICS } from "@/data/questionnaire";
 
+export const dynamic = "force-dynamic";
+
 const MIN_TOPIC_COMMENTS = 3;
 
 export async function GET(

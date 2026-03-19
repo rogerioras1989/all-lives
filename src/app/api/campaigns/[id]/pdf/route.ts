@@ -10,6 +10,7 @@ import {
   tenantError,
 } from "@/lib/tenant";
 
+export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 function getRisk(score: number) {

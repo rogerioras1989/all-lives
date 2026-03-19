@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getTenantContext, requireTenantAnalytics, requireTenantManagement, tenantError } from "@/lib/tenant";
 
+export const dynamic = "force-dynamic";
+
 // fix #1 — ambas as rotas agora exigem autenticação e isolamento por tenant
 export async function GET(req: NextRequest) {
   try {

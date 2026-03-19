@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getTenantContext, requireTenantAnalytics, requireTenantManagement, tenantError } from "@/lib/tenant";
 
+export const dynamic = "force-dynamic";
+
 const SLA_HOURS: Record<string, number> = {
   CRITICAL: 24,
   HIGH: 72,

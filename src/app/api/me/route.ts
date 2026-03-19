@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getAuthPayload } from "@/lib/middleware";
 
+export const dynamic = "force-dynamic";
+
 export async function GET(req: NextRequest) {
   const payload = getAuthPayload(req);
   if (!payload) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

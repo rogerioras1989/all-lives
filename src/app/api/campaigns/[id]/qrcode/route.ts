@@ -6,6 +6,7 @@ import {
   tenantError,
 } from "@/lib/tenant";
 
+export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const qrcode = require("qrcode") as typeof import("qrcode");

@@ -9,6 +9,8 @@ import {
   tenantError,
 } from "@/lib/tenant";
 
+export const dynamic = "force-dynamic";
+
 const client = new Anthropic();
 
 const AI_COOLDOWN_MS = 5 * 60 * 1000; // 5 minutos entre análises por campanha/scope
