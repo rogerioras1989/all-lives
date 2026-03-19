@@ -1,11 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
+const PUBLIC_RESULTS_ENABLED = process.env.ENABLE_PUBLIC_RESULTS === "true";
+
 export async function GET(
   _req: NextRequest,
   { params }: { params: Promise<{ slug: string }> }
 ) {
   try {
+    if (!PUBLIC_RESULTS_ENABLED) {
+      return NextResponse.json({ error: "Resultados públicos desabilitados" }, { status: 403 });
+    }
     const { slug } = await params;
     const campaign = await prisma.campaign.findFirst({
       where: { slug, status: { in: ["ACTIVE", "CLOSED"] } },

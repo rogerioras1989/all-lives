@@ -52,28 +52,34 @@ export async function GET(
       });
     }
 
-    const topicGroups = await prisma.topicScore.groupBy({
-      by: ["topicId", "topicName"],
-      where: { response: responseWhere },
-      _avg: { score: true },
-    });
+    const [topicGroups, topicRiskGroups] = await Promise.all([
+      prisma.topicScore.groupBy({
+        by: ["topicId", "topicName"],
+        where: { response: responseWhere },
+        _avg: { score: true },
+      }),
+      prisma.topicScore.groupBy({
+        by: ["topicId", "riskLevel"],
+        where: { response: responseWhere },
+        _count: { id: true },
+      }),
+    ]);
 
-    const topicAverages = await Promise.all(
-      topicGroups.map(async (g) => {
-        const [low, medium, high, critical] = await Promise.all([
-          prisma.topicScore.count({ where: { response: responseWhere, topicId: g.topicId, score: { lte: 25 } } }),
-          prisma.topicScore.count({ where: { response: responseWhere, topicId: g.topicId, score: { gt: 25, lte: 50 } } }),
-          prisma.topicScore.count({ where: { response: responseWhere, topicId: g.topicId, score: { gt: 50, lte: 75 } } }),
-          prisma.topicScore.count({ where: { response: responseWhere, topicId: g.topicId, score: { gt: 75 } } }),
-        ]);
-        return {
-          topicId: g.topicId,
-          topicName: g.topicName,
-          averageScore: g._avg.score ?? 0,
-          riskDistribution: { LOW: low, MEDIUM: medium, HIGH: high, CRITICAL: critical },
-        };
-      })
+    const riskDistributionByTopic = topicRiskGroups.reduce<Record<number, Record<string, number>>>(
+      (acc, group) => {
+        acc[group.topicId] ??= { LOW: 0, MEDIUM: 0, HIGH: 0, CRITICAL: 0 };
+        acc[group.topicId][group.riskLevel] = group._count.id;
+        return acc;
+      },
+      {}
     );
+
+    const topicAverages = topicGroups.map((g) => ({
+      topicId: g.topicId,
+      topicName: g.topicName,
+      averageScore: g._avg.score ?? 0,
+      riskDistribution: riskDistributionByTopic[g.topicId] ?? { LOW: 0, MEDIUM: 0, HIGH: 0, CRITICAL: 0 },
+    }));
 
     const sectorGroups = await prisma.response.groupBy({
       by: ["sector"],

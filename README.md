@@ -1,36 +1,56 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# DRPS All Lives
 
-## Getting Started
+Aplicação full-stack em Next.js para campanhas de diagnóstico de riscos psicossociais com coleta anônima, dashboard por tenant e backoffice multi-tenant da All Lives.
 
-First, run the development server:
+## Stack
+
+- Next.js App Router
+- React + TypeScript
+- Prisma + PostgreSQL
+- JWT + cookies HttpOnly
+- Tailwind/PostCSS
+- Recharts e React PDF
+
+## Requisitos
+
+- Node.js 22.x
+- PostgreSQL acessível pela `DATABASE_URL`
+
+## Setup
 
 ```bash
+cp .env.example .env
+npm install
+npx prisma migrate dev
+npm run db:seed
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Abra `http://localhost:3000`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Variáveis de ambiente
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Use [`.env.example`](/home/rogerio/psico-all-lives/app/.env.example) como modelo.
 
-## Learn More
+- `DATABASE_URL`: conexão do PostgreSQL
+- `NEXTAUTH_URL`: URL pública da aplicação
+- `JWT_SECRET`: segredo dos access/refresh tokens
+- `CPF_HMAC_SECRET`: segredo para anonimização determinística de CPF
+- `APP_ENCRYPTION_KEY`: chave AES-256-GCM em hex para TOTP
+- `ANTHROPIC_API_KEY`: chave da integração Anthropic
+- `ENABLE_PUBLIC_RESULTS`: mantenha `false` por padrão
 
-To learn more about Next.js, take a look at the following resources:
+## Rotas principais
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- `/consultor/login`: login All Lives
+- `/consultor`: dashboard global multi-tenant
+- `/login`: login da empresa
+- `/dashboard`: analytics do tenant
+- `/portal`: portal do colaborador
+- `/r/[slug]`: link externo anônimo da campanha
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Segurança operacional
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- Nunca versionar `.env` com segredos reais.
+- Rotacionar segredos ao criar novo ambiente.
+- Manter `ENABLE_PUBLIC_RESULTS=false` salvo necessidade formal de compartilhamento público.

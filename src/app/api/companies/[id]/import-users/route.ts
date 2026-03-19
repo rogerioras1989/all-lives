@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { hashCpf, hashPin } from "@/lib/auth";
-import { getTenantContext, tenantError } from "@/lib/tenant";
+import { getTenantContext, requireTenantCompanyMatch, requireTenantManagement, tenantError } from "@/lib/tenant";
 import Papa from "papaparse"; // fix #11
 import crypto from "crypto";
 
@@ -45,17 +45,8 @@ export async function POST(
   try {
     const { id: companyId } = await params;
     const ctx = await getTenantContext(req);
-
-    // Only admins or consultants linked to this company can import
-    if (ctx.type === "user") {
-      if (ctx.companyId !== companyId) {
-        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-      }
-      if (!["ADMIN", "HR", "SUPER_ADMIN"].includes(ctx.role)) {
-        return NextResponse.json({ error: "Permissão insuficiente" }, { status: 403 });
-      }
-    }
-    // consultant link already validated by getTenantContext
+    requireTenantManagement(ctx);
+    requireTenantCompanyMatch(ctx, companyId);
 
     const company = await prisma.company.findUnique({ where: { id: companyId } });
     if (!company) return NextResponse.json({ error: "Empresa não encontrada" }, { status: 404 });

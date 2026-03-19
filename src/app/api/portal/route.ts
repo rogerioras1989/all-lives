@@ -11,14 +11,6 @@ export async function GET(req: NextRequest) {
       where: { id: payload.sub },
       include: {
         company: { select: { id: true, name: true, slug: true } },
-        responses: {
-          orderBy: { createdAt: "desc" },
-          take: 10,
-          include: {
-            campaign: { select: { id: true, title: true, status: true, slug: true } },
-            scores: true,
-          },
-        },
       },
     });
 
@@ -46,12 +38,6 @@ export async function GET(req: NextRequest) {
       };
     }
 
-    const hasRespondedToActive = lastActiveCampaign
-      ? await prisma.response.findFirst({
-          where: { campaignId: lastActiveCampaign.id, userId: user.id },
-        })
-      : null;
-
     return NextResponse.json({
       user: {
         id: user.id,
@@ -61,20 +47,14 @@ export async function GET(req: NextRequest) {
         jobTitle: user.jobTitle,
         company: user.company,
       },
-      responses: user.responses.map((r) => ({
-        id: r.id,
-        campaign: r.campaign,
-        totalScore: r.totalScore,
-        riskLevel: r.riskLevel,
-        createdAt: r.createdAt,
-        topicCount: r.scores.length,
-      })),
+      responseMode: "ANONYMOUS",
+      responseHistoryAvailable: false,
+      responses: [],
       activeCampaign: lastActiveCampaign
         ? {
             id: lastActiveCampaign.id,
             title: lastActiveCampaign.title,
             slug: lastActiveCampaign.slug,
-            hasResponded: !!hasRespondedToActive,
           }
         : null,
       sectorMetrics,

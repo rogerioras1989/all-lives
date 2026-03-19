@@ -41,6 +41,13 @@ type ActionPlan = {
   createdAt: string;
 };
 
+type CommentTopicSummary = {
+  topicId: number;
+  topicName: string;
+  totalComments: number;
+  latestCommentAt: string | null;
+};
+
 const RISK_COLORS: Record<string, string> = {
   LOW: "#5baa6d",
   MEDIUM: "#f59e0b",
@@ -70,7 +77,9 @@ export default function EmpresaDashboardPage() {
   const [snapshots, setSnapshots] = useState<Snapshot[]>([]);
   const [snapshotLoading, setSnapshotLoading] = useState(true);
   const [takingSnapshot, setTakingSnapshot] = useState(false);
-  const [comments, setComments] = useState<{ id: string; topicId: number; text: string; createdAt: string }[]>([]);
+  const [comments, setComments] = useState<CommentTopicSummary[]>([]);
+  const [suppressedTopics, setSuppressedTopics] = useState(0);
+  const [minimumGroupSize, setMinimumGroupSize] = useState(3);
   const [slaAlerts, setSlaAlerts] = useState<SlaAlert[]>([]);
   const [actionPlans, setActionPlans] = useState<ActionPlan[]>([]);
   const [showPlanForm, setShowPlanForm] = useState(false);
@@ -87,7 +96,11 @@ export default function EmpresaDashboardPage() {
 
     fetch(`/api/campaigns/${campaignId}/comments`)
       .then((r) => r.json())
-      .then((d) => setComments(d.comments ?? []));
+      .then((d) => {
+        setComments(d.topics ?? []);
+        setSuppressedTopics(d.suppressedTopics ?? 0);
+        setMinimumGroupSize(d.minimumGroupSize ?? 3);
+      });
 
     fetch(`/api/alerts/sla?companyId=${id}`, { headers: { "x-company-id": id } })
       .then((r) => r.status === 200 ? r.json() : [])
@@ -453,33 +466,41 @@ export default function EmpresaDashboardPage() {
         {/* Comments */}
         <div className="card-3d-sm p-6 fade-up">
           <h2 className="text-sm font-semibold mb-4" style={{ color: "#1e3a4a" }}>
-            💬 Comentários por Tópico ({comments.length})
+            💬 Volume de comentários por tópico ({comments.length})
           </h2>
           {comments.length === 0 ? (
             <p className="text-sm" style={{ color: "#aac0cc" }}>
-              Nenhum comentário registrado ainda.
+              Nenhum tópico atingiu o limiar mínimo de anonimização.
             </p>
           ) : (
             <div className="space-y-3">
               {comments.map((c) => (
-                <div key={c.id} className="rounded-xl px-4 py-3"
+                <div key={c.topicId} className="rounded-xl px-4 py-3"
                   style={{ background: "rgba(91,158,201,0.05)", border: "1px solid rgba(91,158,201,0.12)" }}>
                   <div className="flex items-center gap-2 mb-1">
                     <span className="text-xs font-semibold" style={{ color: "#2e7fa3" }}>
-                      Tópico {c.topicId}
-                    </span>
-                    <span className="text-xs" style={{ color: "#aac0cc" }}>
-                      {new Date(c.createdAt).toLocaleDateString("pt-BR")}
+                      {c.topicName}
                     </span>
                     <span className="text-xs px-1.5 py-0.5 rounded"
                       style={{ background: "rgba(107,114,128,0.1)", color: "#6b7280" }}>
-                      anônimo
+                      {c.totalComments} comentário(s)
                     </span>
                   </div>
-                  <p className="text-sm" style={{ color: "#3a5a6a" }}>{c.text}</p>
+                  <p className="text-sm" style={{ color: "#3a5a6a" }}>
+                    Último comentário visível em{" "}
+                    <strong>
+                      {c.latestCommentAt ? new Date(c.latestCommentAt).toLocaleDateString("pt-BR") : "data indisponível"}
+                    </strong>
+                    . Textos brutos são ocultados para preservar anonimato.
+                  </p>
                 </div>
               ))}
             </div>
+          )}
+          {suppressedTopics > 0 && (
+            <p className="text-xs mt-4" style={{ color: "#7a9aaa" }}>
+              {suppressedTopics} tópico(s) com menos de {minimumGroupSize} comentário(s) foram ocultados.
+            </p>
           )}
         </div>
       </div>

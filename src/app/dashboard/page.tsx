@@ -22,15 +22,13 @@ type DashboardData = {
 type Campaign = { id: string; title: string; status: string; slug: string; _count: { responses: number } };
 type Me = { id: string; name: string; role: string; companyId: string; company: { id: string; name: string; slug: string } };
 type Alert = { id: string; sector: string; message: string; riskLevel: string; createdAt: string };
-type AnonymousResponse = {
-  id: string;
+type AnonymousInsightGroup = {
   sector: string;
-  jobTitle: string | null;
-  totalScore: number | null;
-  riskLevel: string | null;
-  createdAt: string;
-  scores: { topicId: number; topicName: string; score: number; riskLevel: string }[];
-  comments: { id: string; topicId: number; text: string; createdAt: string }[];
+  totalResponses: number;
+  averageScore: number;
+  riskLevel: string;
+  latestResponseDate: string | null;
+  topTopics: { topicId: number; topicName: string; averageScore: number; riskLevel: string }[];
 };
 
 const RISK_COLORS: Record<string, string> = { LOW: "#5baa6d", MEDIUM: "#f59e0b", HIGH: "#f97316", CRITICAL: "#dc2626" };
@@ -191,10 +189,10 @@ export default function DashboardPage() {
   const [endDate, setEndDate] = useState("");
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [compareMode, setCompareMode] = useState(false);
-  const [anonymousResponses, setAnonymousResponses] = useState<AnonymousResponse[]>([]);
-  const [responsesLoading, setResponsesLoading] = useState(false);
-  const [responsesOffset, setResponsesOffset] = useState(0);
-  const [responsesTotal, setResponsesTotal] = useState(0);
+  const [anonymousGroups, setAnonymousGroups] = useState<AnonymousInsightGroup[]>([]);
+  const [groupsLoading, setGroupsLoading] = useState(false);
+  const [suppressedGroups, setSuppressedGroups] = useState(0);
+  const [minimumGroupSize, setMinimumGroupSize] = useState(3);
 
   useEffect(() => {
     fetch("/api/me")
@@ -252,30 +250,24 @@ export default function DashboardPage() {
     setAiResult(null);
     setStartDate("");
     setEndDate("");
-    setResponsesOffset(0);
   }, [activeCampaignId]);
 
   useEffect(() => {
-    setResponsesOffset(0);
-  }, [sector]);
-
-  useEffect(() => {
     if (!activeCampaignId) return;
-    setResponsesLoading(true);
+    setGroupsLoading(true);
     const params = new URLSearchParams();
-    params.set("take", "12");
-    params.set("skip", String(responsesOffset));
     if (sector !== "all") params.set("sector", sector);
 
     fetch(`/api/campaigns/${activeCampaignId}/anonymous-responses?${params.toString()}`)
       .then((response) => response.json())
       .then((payload) => {
-        setAnonymousResponses(payload.responses ?? []);
-        setResponsesTotal(payload.total ?? 0);
-        setResponsesLoading(false);
+        setAnonymousGroups(payload.groups ?? []);
+        setSuppressedGroups(payload.suppressedGroups ?? 0);
+        setMinimumGroupSize(payload.minimumGroupSize ?? 3);
+        setGroupsLoading(false);
       })
-      .catch(() => setResponsesLoading(false));
-  }, [activeCampaignId, sector, responsesOffset]);
+      .catch(() => setGroupsLoading(false));
+  }, [activeCampaignId, sector]);
 
   async function loadQr() {
     if (qrCode) { setShowQr(true); return; }
@@ -312,12 +304,13 @@ export default function DashboardPage() {
   const activeCampaign = campaigns.find((c) => c.id === activeCampaignId);
   const compareCampaign = campaigns.find((c) => c.id === compareCampaignId);
   const roleLabel = me?.role === "MANAGER" ? "Gestor de setor" : me?.role === "HR" ? "RH" : me?.role === "ADMIN" ? "Administrador" : me?.role ?? "";
+  const canManageCompany = ["SUPER_ADMIN", "ADMIN", "HR"].includes(me?.role ?? "");
 
   return (
     <SidebarShell
       badge="Dashboard da Empresa"
       title={me?.company?.name ?? "Tenant"}
-      subtitle="Analytics corporativo anônimo por campanha, setor e submissão."
+      subtitle="Analytics corporativo anônimo por campanha e coortes com limiar mínimo de anonimização."
       userName={me?.name}
       userRole={roleLabel}
       nav={[
@@ -338,7 +331,7 @@ export default function DashboardPage() {
           <div className="flex items-center gap-2 flex-wrap">
             {activeCampaignId && (
               <>
-                {me?.companyId && <NotificationBell companyId={me.companyId} />}
+                {me?.companyId && canManageCompany && <NotificationBell companyId={me.companyId} />}
                 <button onClick={() => setShowDateFilter(!showDateFilter)} className={`btn-ghost text-xs px-3 py-2 flex items-center gap-1.5 ${showDateFilter ? "ring-2 ring-blue-300" : ""}`}>
                   📅 Período
                 </button>
@@ -346,9 +339,11 @@ export default function DashboardPage() {
                   ⚖️ Comparar
                 </button>
                 <button onClick={loadQr} className="btn-ghost text-xs px-3 py-2 flex items-center gap-1.5"><span>📱</span> QR</button>
-                <button onClick={runAi} disabled={aiLoading} className="btn-primary text-xs px-3 py-2 flex items-center gap-1.5">
-                  <span>🤖</span> {aiLoading ? "Analisando…" : "IA"}
-                </button>
+                {canManageCompany && (
+                  <button onClick={runAi} disabled={aiLoading} className="btn-primary text-xs px-3 py-2 flex items-center gap-1.5">
+                    <span>🤖</span> {aiLoading ? "Analisando…" : "IA"}
+                  </button>
+                )}
                 {data && data.totalResponses > 0 && (
                   <button onClick={() => exportCSV(data, activeCampaign?.title ?? "DRPS")} className="btn-ghost text-xs px-3 py-2 flex items-center gap-1.5">
                     📥 CSV
@@ -634,103 +629,69 @@ export default function DashboardPage() {
             <div className="card-3d-sm overflow-hidden mt-6">
               <div className="px-6 py-4 border-b flex items-center justify-between gap-3" style={{ borderColor: "rgba(91,158,201,0.1)" }}>
                 <div>
-                  <h2 className="text-sm font-semibold" style={{ color: "#1e3a4a" }}>Submissões anônimas</h2>
+                  <h2 className="text-sm font-semibold" style={{ color: "#1e3a4a" }}>Coortes anônimas por setor</h2>
                   <p className="mt-1 text-xs" style={{ color: "#7a9aaa" }}>
-                    Visualização por resposta sem identificação do colaborador.
+                    Setores com menos de {minimumGroupSize} respostas ficam suprimidos para reduzir risco de reidentificação.
                   </p>
                 </div>
                 <span className="text-xs" style={{ color: "#7a9aaa" }}>
-                  {responsesTotal} resposta(s)
+                  {suppressedGroups > 0 ? `${suppressedGroups} grupo(s) ocultado(s)` : "Anonimização ativa"}
                 </span>
               </div>
 
-              {responsesLoading ? (
+              {groupsLoading ? (
                 <div className="py-12 flex justify-center">
                   <div className="w-6 h-6 border-2 rounded-full animate-spin" style={{ borderColor: "#2e7fa3", borderTopColor: "transparent" }} />
                 </div>
-              ) : anonymousResponses.length === 0 ? (
+              ) : anonymousGroups.length === 0 ? (
                 <div className="px-6 py-10 text-center text-sm" style={{ color: "#aac0cc" }}>
-                  Nenhuma submissão disponível para o filtro atual.
+                  Nenhuma coorte atende o limiar mínimo de anonimização para o filtro atual.
                 </div>
               ) : (
                 <div className="divide-y" style={{ borderColor: "rgba(91,158,201,0.08)" }}>
-                  {anonymousResponses.map((response, index) => (
-                    <div key={response.id} className="px-6 py-5">
+                  {anonymousGroups.map((group) => (
+                    <div key={group.sector} className="px-6 py-5">
                       <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                         <div>
                           <div className="flex flex-wrap items-center gap-2">
                             <span className="text-sm font-semibold" style={{ color: "#1e3a4a" }}>
-                              Resposta #{responsesOffset + index + 1}
+                              {group.sector}
                             </span>
-                            {response.riskLevel && (
-                              <span className="px-2 py-0.5 rounded-full text-xs font-semibold" style={{ background: RISK_BG[response.riskLevel], color: RISK_COLORS[response.riskLevel] }}>
-                                {RISK_LABELS[response.riskLevel]}
+                            <span className="px-2 py-0.5 rounded-full text-xs font-semibold" style={{ background: RISK_BG[group.riskLevel], color: RISK_COLORS[group.riskLevel] }}>
+                              {RISK_LABELS[group.riskLevel]}
+                            </span>
+                            {group.latestResponseDate && (
+                              <span className="text-xs" style={{ color: "#7a9aaa" }}>
+                                última resposta visível em {new Date(group.latestResponseDate).toLocaleDateString("pt-BR")}
                               </span>
                             )}
-                            <span className="text-xs" style={{ color: "#7a9aaa" }}>
-                              {new Date(response.createdAt).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}
-                            </span>
                           </div>
                           <p className="mt-1 text-xs" style={{ color: "#7a9aaa" }}>
-                            Setor: <strong style={{ color: "#1e5f7a" }}>{response.sector}</strong>
-                            {response.jobTitle && <span> · Cargo: <strong style={{ color: "#1e5f7a" }}>{response.jobTitle}</strong></span>}
-                            {response.totalScore !== null && <span> · Score geral: <strong style={{ color: "#1e5f7a" }}>{Math.round(response.totalScore)}%</strong></span>}
+                            <strong style={{ color: "#1e5f7a" }}>{group.totalResponses}</strong> resposta(s) anônima(s)
+                            {" · "}
+                            score médio <strong style={{ color: "#1e5f7a" }}>{Math.round(group.averageScore)}%</strong>
                           </p>
                         </div>
 
-                        <div className="rounded-2xl px-4 py-3 lg:min-w-[280px]" style={{ background: "rgba(91,158,201,0.05)", border: "1px solid rgba(91,158,201,0.12)" }}>
-                          <p className="text-xs font-semibold mb-2" style={{ color: "#1e3a4a" }}>Scores por tópico</p>
+                        <div className="rounded-2xl px-4 py-3 lg:min-w-[320px]" style={{ background: "rgba(91,158,201,0.05)", border: "1px solid rgba(91,158,201,0.12)" }}>
+                          <p className="text-xs font-semibold mb-2" style={{ color: "#1e3a4a" }}>Tópicos mais sensíveis</p>
                           <div className="space-y-2">
-                            {response.scores.map((score) => (
-                              <div key={`${response.id}-${score.topicId}`}>
+                            {group.topTopics.map((topic) => (
+                              <div key={`${group.sector}-${topic.topicId}`}>
                                 <div className="flex items-center justify-between gap-2">
-                                  <span className="text-xs" style={{ color: "#5a7a8a" }}>{score.topicName}</span>
-                                  <span className="text-xs font-semibold" style={{ color: RISK_COLORS[score.riskLevel] }}>{Math.round(score.score)}%</span>
+                                  <span className="text-xs" style={{ color: "#5a7a8a" }}>{topic.topicName}</span>
+                                  <span className="text-xs font-semibold" style={{ color: RISK_COLORS[topic.riskLevel] }}>{topic.averageScore}%</span>
                                 </div>
                                 <div className="mt-1 h-1.5 rounded-full" style={{ background: "rgba(91,158,201,0.12)" }}>
-                                  <div className="h-1.5 rounded-full" style={{ width: `${score.score}%`, background: RISK_COLORS[score.riskLevel] }} />
+                                  <div className="h-1.5 rounded-full" style={{ width: `${topic.averageScore}%`, background: RISK_COLORS[topic.riskLevel] }} />
                                 </div>
                               </div>
                             ))}
                           </div>
                         </div>
                       </div>
-
-                      {response.comments.length > 0 && (
-                        <div className="mt-4 rounded-2xl p-4" style={{ background: "rgba(91,170,109,0.06)", border: "1px solid rgba(91,170,109,0.12)" }}>
-                          <p className="text-xs font-semibold mb-2" style={{ color: "#3d8a50" }}>Comentários anônimos</p>
-                          <div className="space-y-2">
-                            {response.comments.map((comment) => (
-                              <div key={comment.id} className="text-xs" style={{ color: "#5a7a8a" }}>
-                                <strong style={{ color: "#1e5f7a" }}>Tópico {comment.topicId}:</strong> {comment.text}
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
                     </div>
                   ))}
-                </div>
-              )}
-
-              {responsesTotal > 12 && (
-                <div className="px-6 py-4 border-t flex justify-between" style={{ borderColor: "rgba(91,158,201,0.1)" }}>
-                  <button
-                    onClick={() => setResponsesOffset((value) => Math.max(0, value - 12))}
-                    disabled={responsesOffset === 0}
-                    className="btn-ghost text-xs px-3 py-2"
-                    style={{ opacity: responsesOffset === 0 ? 0.45 : 1 }}
-                  >
-                    ← Anteriores
-                  </button>
-                  <button
-                    onClick={() => setResponsesOffset((value) => value + 12)}
-                    disabled={responsesOffset + 12 >= responsesTotal}
-                    className="btn-ghost text-xs px-3 py-2"
-                    style={{ opacity: responsesOffset + 12 >= responsesTotal ? 0.45 : 1 }}
-                  >
-                    Próximas →
-                  </button>
                 </div>
               )}
             </div>

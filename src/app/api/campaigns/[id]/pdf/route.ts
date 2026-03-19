@@ -46,30 +46,34 @@ export async function GET(
     }
 
     // aggregate topic scores via groupBy
-    const topicGroups = await prisma.topicScore.groupBy({
-      by: ["topicId", "topicName"],
-      where: { response: { campaignId: id } },
-      _avg: { score: true },
-      _count: { score: true },
-    });
+    const [topicGroups, topicRiskGroups] = await Promise.all([
+      prisma.topicScore.groupBy({
+        by: ["topicId", "topicName"],
+        where: { response: { campaignId: id } },
+        _avg: { score: true },
+      }),
+      prisma.topicScore.groupBy({
+        by: ["topicId", "riskLevel"],
+        where: { response: { campaignId: id } },
+        _count: { id: true },
+      }),
+    ]);
 
-    // risk distribution per topic requires individual scores — use count per bucket
-    const topicAverages = await Promise.all(
-      topicGroups.map(async (g) => {
-        const [low, medium, high, critical] = await Promise.all([
-          prisma.topicScore.count({ where: { response: { campaignId: id }, topicId: g.topicId, score: { lte: 25 } } }),
-          prisma.topicScore.count({ where: { response: { campaignId: id }, topicId: g.topicId, score: { gt: 25, lte: 50 } } }),
-          prisma.topicScore.count({ where: { response: { campaignId: id }, topicId: g.topicId, score: { gt: 50, lte: 75 } } }),
-          prisma.topicScore.count({ where: { response: { campaignId: id }, topicId: g.topicId, score: { gt: 75 } } }),
-        ]);
-        return {
-          topicId: g.topicId,
-          topicName: g.topicName,
-          averageScore: g._avg.score ?? 0,
-          riskDistribution: { LOW: low, MEDIUM: medium, HIGH: high, CRITICAL: critical },
-        };
-      })
+    const riskDistributionByTopic = topicRiskGroups.reduce<Record<number, Record<string, number>>>(
+      (acc, group) => {
+        acc[group.topicId] ??= { LOW: 0, MEDIUM: 0, HIGH: 0, CRITICAL: 0 };
+        acc[group.topicId][group.riskLevel] = group._count.id;
+        return acc;
+      },
+      {}
     );
+
+    const topicAverages = topicGroups.map((g) => ({
+      topicId: g.topicId,
+      topicName: g.topicName,
+      averageScore: g._avg.score ?? 0,
+      riskDistribution: riskDistributionByTopic[g.topicId] ?? { LOW: 0, MEDIUM: 0, HIGH: 0, CRITICAL: 0 },
+    }));
 
     // sector summary via groupBy on Response
     const sectorGroups = await prisma.response.groupBy({

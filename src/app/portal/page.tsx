@@ -4,9 +4,6 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
-const RISK_COLORS: Record<string, string> = { LOW: "#5baa6d", MEDIUM: "#f59e0b", HIGH: "#f97316", CRITICAL: "#dc2626" };
-const RISK_LABELS: Record<string, string> = { LOW: "Baixo", MEDIUM: "Moderado", HIGH: "Alto", CRITICAL: "Crítico" };
-
 type Response = {
   id: string;
   campaign: { id: string; title: string; status: string; slug: string };
@@ -18,8 +15,10 @@ type Response = {
 
 type PortalData = {
   user: { id: string; name: string | null; email: string | null; sector: string | null; jobTitle: string | null; company: { id: string; name: string; slug: string } | null };
+  responseMode: "ANONYMOUS";
+  responseHistoryAvailable: boolean;
   responses: Response[];
-  activeCampaign: { id: string; title: string; slug: string; hasResponded: boolean } | null;
+  activeCampaign: { id: string; title: string; slug: string } | null;
   sectorMetrics: { campaignTitle: string; sector: string; avgScore: number; totalResponses: number } | null;
 };
 
@@ -76,7 +75,6 @@ export default function PortalPage() {
             </span>
           </div>
           <div className="flex items-center gap-2">
-            <Link href="/dashboard" className="btn-ghost text-xs px-3 py-2">Dashboard</Link>
             <Link href="/" className="btn-ghost text-xs px-3 py-2">← Home</Link>
           </div>
         </div>
@@ -104,36 +102,33 @@ export default function PortalPage() {
         </div>
 
         {/* Active campaign banner */}
-        {activeCampaign && !activeCampaign.hasResponded && (
+        {activeCampaign && (
           <div className="rounded-2xl p-5 fade-up flex items-center justify-between gap-4"
             style={{ background: "rgba(46,127,163,0.08)", border: "1px solid rgba(46,127,163,0.2)" }}>
             <div>
               <p className="text-sm font-semibold" style={{ color: "#1e5f7a" }}>📋 Campanha ativa: {activeCampaign.title}</p>
-              <p className="text-xs mt-0.5" style={{ color: "#7a9aaa" }}>Você ainda não respondeu. Leva cerca de 5 minutos.</p>
+              <p className="text-xs mt-0.5" style={{ color: "#7a9aaa" }}>
+                A pesquisa é anônima. O sistema não confirma individualmente quem já respondeu.
+              </p>
             </div>
             <Link href={`/r/${activeCampaign.slug}`} className="btn-primary text-xs px-4 py-2 whitespace-nowrap">
               Responder agora →
             </Link>
           </div>
         )}
-        {activeCampaign?.hasResponded && (
-          <div className="rounded-2xl p-4 fade-up" style={{ background: "rgba(91,170,109,0.08)", border: "1px solid rgba(91,170,109,0.2)" }}>
-            <p className="text-sm font-medium" style={{ color: "#3d8a50" }}>✅ Você já respondeu à campanha ativa: <strong>{activeCampaign.title}</strong></p>
-          </div>
-        )}
 
         {/* Stats row */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 fade-up">
           {[
-            { icon: "📝", value: responses.length, label: "Respostas enviadas" },
+            { icon: "📝", value: data.responseHistoryAvailable ? responses.length : "—", label: "Histórico individual" },
             {
               icon: "🎯",
-              value: lastResponse?.totalScore != null ? `${Math.round(lastResponse.totalScore)}` : "—",
+              value: data.responseHistoryAvailable && lastResponse?.totalScore != null ? `${Math.round(lastResponse.totalScore)}` : "—",
               label: "Último score"
             },
             {
               icon: trend !== null ? (trend > 0 ? "📈" : trend < 0 ? "📉" : "➡️") : "📊",
-              value: trend !== null ? `${trend > 0 ? "+" : ""}${Math.round(trend)}pts` : "—",
+              value: data.responseHistoryAvailable && trend !== null ? `${trend > 0 ? "+" : ""}${Math.round(trend)}pts` : "—",
               label: "Evolução"
             },
             {
@@ -153,30 +148,17 @@ export default function PortalPage() {
         <div className="grid sm:grid-cols-2 gap-6">
           {/* History */}
           <div className="card-3d-sm p-5 fade-up">
-            <h2 className="text-sm font-semibold mb-4" style={{ color: "#1e3a4a" }}>📜 Histórico de respostas</h2>
-            {responses.length === 0 ? (
-              <p className="text-xs text-center py-6" style={{ color: "#aac0cc" }}>Nenhuma resposta enviada ainda</p>
-            ) : (
-              <div className="space-y-3">
-                {responses.map((r) => (
-                  <div key={r.id} className="flex items-center justify-between rounded-xl px-3 py-2.5"
-                    style={{ background: "rgba(91,158,201,0.05)", border: "1px solid rgba(91,158,201,0.1)" }}>
-                    <div>
-                      <p className="text-xs font-medium" style={{ color: "#1e3a4a" }}>{r.campaign.title}</p>
-                      <p className="text-xs mt-0.5" style={{ color: "#7a9aaa" }}>
-                        {new Date(r.createdAt).toLocaleDateString("pt-BR")}
-                      </p>
-                    </div>
-                    {r.riskLevel && (
-                      <span className="text-xs font-semibold px-2 py-0.5 rounded-full"
-                        style={{ background: `${RISK_COLORS[r.riskLevel]}20`, color: RISK_COLORS[r.riskLevel] }}>
-                        {RISK_LABELS[r.riskLevel]}
-                      </span>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
+            <h2 className="text-sm font-semibold mb-4" style={{ color: "#1e3a4a" }}>📜 Privacidade da resposta</h2>
+            <div className="rounded-xl px-4 py-4"
+              style={{ background: "rgba(91,158,201,0.05)", border: "1px solid rgba(91,158,201,0.1)" }}>
+              <p className="text-sm font-medium" style={{ color: "#1e3a4a" }}>
+                Este portal opera em modo de pesquisa anônima.
+              </p>
+              <p className="text-xs mt-2 leading-relaxed" style={{ color: "#7a9aaa" }}>
+                Para preservar a confidencialidade, a plataforma não mantém histórico individual das respostas nem mostra confirmação pessoal de participação.
+                Os indicadores exibidos abaixo são agregados por setor e campanha.
+              </p>
+            </div>
           </div>
 
           {/* Sector metrics */}

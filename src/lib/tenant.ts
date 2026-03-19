@@ -129,6 +129,14 @@ export function requireTenantManagement(ctx: TenantContext): TenantContext {
   return ctx;
 }
 
+export function requireTenantCompanyMatch(
+  ctx: TenantContext,
+  companyId: string
+): TenantContext {
+  if (ctx.companyId !== companyId) throw new Error("FORBIDDEN");
+  return ctx;
+}
+
 export function tenantError(err: unknown) {
   const msg = err instanceof Error ? err.message : "UNKNOWN";
   const map: Record<string, [string, number]> = {

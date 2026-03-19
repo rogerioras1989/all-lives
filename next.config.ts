@@ -1,5 +1,7 @@
 import type { NextConfig } from "next";
 
+const isProduction = process.env.NODE_ENV === "production";
+
 // M-4: security headers — CSP, X-Frame-Options, etc.
 const securityHeaders = [
   { key: "X-Frame-Options", value: "DENY" },
@@ -11,7 +13,9 @@ const securityHeaders = [
     key: "Content-Security-Policy",
     value: [
       "default-src 'self'",
-      "script-src 'self' 'unsafe-inline' 'unsafe-eval'", // unsafe-eval necessário para Next.js dev/prod
+      isProduction
+        ? "script-src 'self' 'unsafe-inline'"
+        : "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
       "style-src 'self' 'unsafe-inline'",
       "img-src 'self' data: blob: https://all-livesocupacional.com.br",
       "font-src 'self'",

@@ -2,10 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import {
   getTenantContext,
+  isManagerRestricted,
   requireCampaignOwnership,
   requireTenantAnalytics,
   tenantError,
 } from "@/lib/tenant";
+import { TOPICS } from "@/data/questionnaire";
+
+const MIN_TOPIC_COMMENTS = 3;
 
 export async function GET(
   req: NextRequest,
@@ -17,26 +21,60 @@ export async function GET(
     await requireCampaignOwnership(id, ctx);
     requireTenantAnalytics(ctx);
 
+    let managerSector: string | undefined;
+    if (isManagerRestricted(ctx)) {
+      const user = await prisma.user.findUnique({
+        where: { id: ctx.userId },
+        select: { sector: true },
+      });
+      managerSector = user?.sector ?? undefined;
+    }
+
     const { searchParams } = new URL(req.url);
     const topicId = searchParams.get("topicId");
-    // fix #15 — pagination
-    const take = Math.min(Number(searchParams.get("take") ?? 50), 200);
-    const skip = Number(searchParams.get("skip") ?? 0);
-
     const comments = await prisma.topicComment.findMany({
       where: {
         response: { campaignId: id },
+        ...(managerSector ? { response: { campaignId: id, sector: managerSector } } : {}),
         ...(topicId ? { topicId: Number(topicId) } : {}),
       },
-      orderBy: { createdAt: "desc" },
-      take,
-      skip,
       select: {
-        id: true, topicId: true, text: true, isAnonymous: true, createdAt: true,
+        topicId: true,
+        createdAt: true,
       },
     });
 
-    return NextResponse.json({ comments, take, skip });
+    const grouped = comments.reduce<Record<number, { totalComments: number; latestCommentAt: string | null }>>(
+      (acc, comment) => {
+        acc[comment.topicId] ??= { totalComments: 0, latestCommentAt: null };
+        acc[comment.topicId].totalComments += 1;
+        const createdAt = comment.createdAt.toISOString();
+        if (!acc[comment.topicId].latestCommentAt || createdAt > acc[comment.topicId].latestCommentAt!) {
+          acc[comment.topicId].latestCommentAt = createdAt;
+        }
+        return acc;
+      },
+      {}
+    );
+
+    const topics = Object.entries(grouped)
+      .map(([rawTopicId, info]) => {
+        const topicId = Number(rawTopicId);
+        return {
+          topicId,
+          topicName: TOPICS.find((topic) => topic.id === topicId)?.title ?? `Tópico ${topicId}`,
+          totalComments: info.totalComments,
+          latestCommentAt: info.latestCommentAt,
+        };
+      })
+      .filter((topic) => topic.totalComments >= MIN_TOPIC_COMMENTS)
+      .sort((left, right) => right.totalComments - left.totalComments);
+
+    return NextResponse.json({
+      topics,
+      minimumGroupSize: MIN_TOPIC_COMMENTS,
+      suppressedTopics: Object.keys(grouped).length - topics.length,
+    });
   } catch (err) {
     const { error, status } = tenantError(err);
     return NextResponse.json({ error }, { status });

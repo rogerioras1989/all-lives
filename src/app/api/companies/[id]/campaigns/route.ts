@@ -1,6 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getTenantContext, requireTenantAnalytics, requireTenantManagement, tenantError } from "@/lib/tenant";
+import {
+  getTenantContext,
+  requireTenantAnalytics,
+  requireTenantCompanyMatch,
+  requireTenantManagement,
+  tenantError,
+} from "@/lib/tenant";
 
 export async function GET(
   req: NextRequest,
@@ -10,17 +16,7 @@ export async function GET(
     const { id: companyId } = await params;
     const ctx = await getTenantContext(req);
     requireTenantAnalytics(ctx);
-
-    // User must belong to this company; consultant must be linked
-    if (ctx.type === "user" && ctx.companyId !== companyId) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
-    if (ctx.type === "consultant") {
-      const link = await prisma.consultantCompany.findUnique({
-        where: { consultantId_companyId: { consultantId: ctx.userId, companyId } },
-      });
-      if (!link) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
+    requireTenantCompanyMatch(ctx, companyId);
 
     const campaigns = await prisma.campaign.findMany({
       where: { companyId },
@@ -47,17 +43,31 @@ export async function POST(
     const { id: companyId } = await params;
     const ctx = await getTenantContext(req);
     requireTenantManagement(ctx);
-
-    if (ctx.type === "user" && !["ADMIN", "HR", "SUPER_ADMIN"].includes(ctx.role)) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
-    if (ctx.type === "user" && ctx.companyId !== companyId) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
+    requireTenantCompanyMatch(ctx, companyId);
 
     const body = await req.json();
     const { title, description, startDate, endDate } = body;
     if (!title) return NextResponse.json({ error: "Título obrigatório" }, { status: 400 });
+
+    const parsedStart = startDate ? new Date(startDate) : undefined;
+    const parsedEnd = endDate ? new Date(endDate) : undefined;
+    if (parsedStart && isNaN(parsedStart.getTime())) {
+      return NextResponse.json({ error: "Data de início inválida" }, { status: 400 });
+    }
+    if (parsedEnd && isNaN(parsedEnd.getTime())) {
+      return NextResponse.json({ error: "Data de término inválida" }, { status: 400 });
+    }
+    if (parsedStart && parsedEnd && parsedEnd <= parsedStart) {
+      return NextResponse.json({ error: "Data de término deve ser posterior à data de início" }, { status: 400 });
+    }
+
+    const baseSlug = title
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-|-$/g, "");
+    const slug = `${baseSlug}-${Date.now()}`;
 
     const campaign = await prisma.campaign.create({
       data: {
@@ -65,8 +75,9 @@ export async function POST(
         description,
         status: "DRAFT",
         companyId,
-        startDate: startDate ? new Date(startDate) : undefined,
-        endDate: endDate ? new Date(endDate) : undefined,
+        slug,
+        startDate: parsedStart,
+        endDate: parsedEnd,
       },
     });
 

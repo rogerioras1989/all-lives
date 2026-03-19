@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
+const MAX_MESSAGE_LENGTH = 4000;
+
 export async function POST(req: NextRequest) {
   try {
     const { name, email, company, message } = await req.json();
@@ -7,7 +9,16 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Nome e email são obrigatórios" }, { status: 400 });
     }
 
-    console.log("[Contact Form]", { name, email, company, message, at: new Date().toISOString() });
+    if (typeof message === "string" && message.length > MAX_MESSAGE_LENGTH) {
+      return NextResponse.json({ error: "Mensagem excede o limite permitido" }, { status: 400 });
+    }
+
+    console.info("[Contact Form]", {
+      emailDomain: typeof email === "string" && email.includes("@") ? email.split("@")[1] : "invalid",
+      hasCompany: !!company,
+      hasMessage: !!message,
+      at: new Date().toISOString(),
+    });
 
     const smtpHost = process.env.SMTP_HOST;
     if (smtpHost) {

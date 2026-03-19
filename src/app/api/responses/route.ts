@@ -1,10 +1,26 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { calculateTopicScore, getRiskLevel, TOPICS, SECTORS } from "@/data/questionnaire";
+import crypto from "crypto";
 
 const VALID_TOPIC_IDS = new Set(TOPICS.map((t) => t.id));
 const MAX_ANSWERS = TOPICS.length * 10; // 90
 const MAX_COMMENT_LENGTH = 2000;
+const EXPECTED_ANSWER_KEYS = new Set(
+  TOPICS.flatMap((topic) => topic.questions.map((question) => `${topic.id}-${question.id}`))
+);
+const RESPONSE_WINDOW_MS = 60 * 60 * 1000;
+const MAX_SUBMISSIONS_PER_WINDOW = 3;
+const submissionStore = new Map<string, { count: number; windowStart: number }>();
+
+if (typeof setInterval !== "undefined") {
+  setInterval(() => {
+    const cutoff = Date.now() - RESPONSE_WINDOW_MS * 2;
+    for (const [key, entry] of submissionStore.entries()) {
+      if (entry.windowStart < cutoff) submissionStore.delete(key);
+    }
+  }, 10 * 60 * 1000);
+}
 
 // M-1: redação de PII em comentários anônimos (CPF, e-mail, telefone)
 function redactPii(text: string): string {
@@ -14,10 +30,36 @@ function redactPii(text: string): string {
     .replace(/\b\d{2}[\s.-]?\d{4,5}[\s.-]?\d{4}\b/g, "[TELEFONE]");
 }
 
+function getRequesterIp(req: NextRequest): string {
+  return (
+    req.headers.get("x-forwarded-for")?.split(",")[0].trim() ||
+    req.headers.get("x-real-ip") ||
+    "unknown"
+  );
+}
+
+function hashIp(ip: string): string {
+  const secret = process.env.CPF_HMAC_SECRET || process.env.JWT_SECRET;
+  if (!secret) throw new Error("MISSING_RATE_LIMIT_SECRET");
+  return crypto.createHmac("sha256", secret).update(ip).digest("hex");
+}
+
+function checkSubmissionRateLimit(key: string): boolean {
+  const now = Date.now();
+  const current = submissionStore.get(key);
+  if (!current || now - current.windowStart > RESPONSE_WINDOW_MS) {
+    submissionStore.set(key, { count: 1, windowStart: now });
+    return true;
+  }
+  current.count += 1;
+  return current.count <= MAX_SUBMISSIONS_PER_WINDOW;
+}
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     const { campaignId, sector, jobTitle, answers, comments } = body;
+    const ipHash = hashIp(getRequesterIp(req));
 
     if (!campaignId || !sector || !answers || !Array.isArray(answers)) {
       return NextResponse.json({ error: "Dados inválidos" }, { status: 400 });
@@ -42,7 +84,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Número de respostas excede o limite" }, { status: 400 });
     }
 
+    if (answers.length !== EXPECTED_ANSWER_KEYS.size) {
+      return NextResponse.json({ error: "Questionário incompleto ou inconsistente" }, { status: 400 });
+    }
+
     // fix #5 + #20 — validar topicId, questionId e value de cada resposta
+    const receivedKeys = new Set<string>();
     for (const a of answers) {
       if (
         typeof a.topicId !== "number" ||
@@ -54,9 +101,29 @@ export async function POST(req: NextRequest) {
       if (!VALID_TOPIC_IDS.has(a.topicId)) {
         return NextResponse.json({ error: `topicId inválido: ${a.topicId}` }, { status: 400 });
       }
+      const answerKey = `${a.topicId}-${a.questionId}`;
+      if (!EXPECTED_ANSWER_KEYS.has(answerKey) || receivedKeys.has(answerKey)) {
+        return NextResponse.json({ error: "Perguntas duplicadas ou fora do questionário esperado" }, { status: 400 });
+      }
+      receivedKeys.add(answerKey);
       if (!Number.isInteger(a.value) || a.value < 0 || a.value > 4) {
         return NextResponse.json({ error: "Valor de resposta deve ser inteiro entre 0 e 4" }, { status: 400 });
       }
+    }
+
+    if (!checkSubmissionRateLimit(`${campaignId}:${ipHash}`)) {
+      return NextResponse.json({ error: "Muitas respostas enviadas a partir desta origem. Tente novamente mais tarde." }, { status: 429 });
+    }
+
+    const recentSubmissions = await prisma.response.count({
+      where: {
+        campaignId,
+        ipHash,
+        createdAt: { gte: new Date(Date.now() - RESPONSE_WINDOW_MS) },
+      },
+    });
+    if (recentSubmissions >= MAX_SUBMISSIONS_PER_WINDOW) {
+      return NextResponse.json({ error: "Limite temporário de respostas atingido para esta origem." }, { status: 429 });
     }
 
     const topicScores = TOPICS.map((topic) => {
@@ -104,6 +171,7 @@ export async function POST(req: NextRequest) {
           jobTitle,
           totalScore,
           riskLevel: overallRisk,
+          ipHash,
           answers: {
             create: answers.map(
               (a: { topicId: number; questionId: number; value: number }) => ({
@@ -132,6 +200,9 @@ export async function POST(req: NextRequest) {
   } catch (error) {
     if (error instanceof Error && error.message === "CAMPAIGN_INACTIVE") {
       return NextResponse.json({ error: "Campanha não está ativa" }, { status: 400 });
+    }
+    if (error instanceof Error && error.message === "MISSING_RATE_LIMIT_SECRET") {
+      return NextResponse.json({ error: "Configuração de segurança ausente" }, { status: 500 });
     }
     console.error("[responses]", error instanceof Error ? error.message : "unknown");
     return NextResponse.json({ error: "Erro interno" }, { status: 500 });

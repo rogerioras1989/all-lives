@@ -1,10 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { hashCpf, hashPin } from "@/lib/auth";
+import {
+  getTenantContext,
+  requireTenantManagement,
+  tenantError,
+} from "@/lib/tenant";
 
-// Registro de funcionário (pode ser protegido por admin em produção)
 export async function POST(req: NextRequest) {
   try {
+    const ctx = await getTenantContext(req);
+    requireTenantManagement(ctx);
     const body = await req.json();
     // B-3: trim em todos os campos de texto para evitar dados inconsistentes
     const cpf = typeof body.cpf === "string" ? body.cpf.trim() : body.cpf;
@@ -13,8 +19,6 @@ export async function POST(req: NextRequest) {
     const email = typeof body.email === "string" ? body.email.trim().toLowerCase() || undefined : body.email;
     const sector = typeof body.sector === "string" ? body.sector.trim() || undefined : body.sector;
     const jobTitle = typeof body.jobTitle === "string" ? body.jobTitle.trim() || undefined : body.jobTitle;
-    const { companyId } = body;
-
     if (!cpf || !pin) {
       return NextResponse.json({ error: "CPF e PIN obrigatórios" }, { status: 400 });
     }
@@ -22,10 +26,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "PIN deve ter 6 dígitos" }, { status: 400 });
     }
 
-    // fix #18 — validar que companyId existe antes de criar o usuário
-    if (!companyId) {
-      return NextResponse.json({ error: "companyId é obrigatório" }, { status: 400 });
-    }
+    const companyId = ctx.companyId;
     const company = await prisma.company.findUnique({ where: { id: companyId } });
     if (!company) {
       return NextResponse.json({ error: "Empresa não encontrada" }, { status: 404 });
@@ -53,6 +54,8 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ ok: true, userId: user.id }, { status: 201 });
   } catch (err) {
+    const { error, status } = tenantError(err);
+    if (status !== 500) return NextResponse.json({ error }, { status });
     console.error("[register]", err instanceof Error ? err.message : "unknown");
     return NextResponse.json({ error: "Erro interno" }, { status: 500 });
   }

@@ -5,6 +5,7 @@ import {
   getTenantContext,
   requireCampaignOwnership,
   requireTenantAnalytics,
+  requireTenantManagement,
   tenantError,
 } from "@/lib/tenant";
 
@@ -28,7 +29,7 @@ export async function POST(
     const { id } = await params;
     const ctx = await getTenantContext(req);
     await requireCampaignOwnership(id, ctx);
-    requireTenantAnalytics(ctx);
+    requireTenantManagement(ctx);
 
     const { scope = "CAMPAIGN", sector } = await req.json();
 
@@ -49,41 +50,47 @@ export async function POST(
       }
     }
 
-    const campaign = await prisma.campaign.findUnique({
-      where: { id },
-      include: { responses: { include: { scores: true } } },
-    });
+    const responseWhere = {
+      campaignId: id,
+      ...(scope === "SECTOR" && sector ? { sector } : {}),
+    };
+
+    const [campaign, responseCount, topicGroups, riskGroups] = await Promise.all([
+      prisma.campaign.findUnique({
+        where: { id },
+        select: { id: true, title: true },
+      }),
+      prisma.response.count({ where: responseWhere }),
+      prisma.topicScore.groupBy({
+        by: ["topicId", "topicName"],
+        where: { response: responseWhere },
+        _avg: { score: true },
+        _count: { id: true },
+      }),
+      prisma.response.groupBy({
+        by: ["riskLevel"],
+        where: { ...responseWhere, riskLevel: { not: null } },
+        _count: { id: true },
+      }),
+    ]);
     if (!campaign) return NextResponse.json({ error: "Not found" }, { status: 404 });
-
-    let responses = campaign.responses;
-    if (scope === "SECTOR" && sector) {
-      responses = responses.filter((r) => r.sector === sector);
-    }
-
-    if (responses.length === 0) {
+    if (responseCount === 0) {
       return NextResponse.json({ error: "Sem respostas suficientes" }, { status: 400 });
     }
 
-    const topicAggregates: Record<string, { name: string; scores: number[] }> = {};
-    for (const resp of responses) {
-      for (const ts of resp.scores) {
-        if (!topicAggregates[ts.topicId]) {
-          topicAggregates[ts.topicId] = { name: ts.topicName, scores: [] };
-        }
-        topicAggregates[ts.topicId].scores.push(ts.score);
-      }
-    }
-
-    const topicSummary = Object.entries(topicAggregates).map(([, v]) => ({
-      topic: v.name,
-      avgScore: (v.scores.reduce((a, b) => a + b, 0) / v.scores.length).toFixed(2),
-      count: v.scores.length,
+    const topicSummary = topicGroups.map((group) => ({
+      topic: group.topicName,
+      avgScore: (group._avg.score ?? 0).toFixed(2),
+      count: group._count.id,
     }));
 
-    const riskCounts = { LOW: 0, MEDIUM: 0, HIGH: 0, CRITICAL: 0 };
-    for (const r of responses) {
-      if (r.riskLevel) riskCounts[r.riskLevel]++;
-    }
+    const riskCounts = riskGroups.reduce(
+      (acc, group) => {
+        if (group.riskLevel) acc[group.riskLevel] = group._count.id;
+        return acc;
+      },
+      { LOW: 0, MEDIUM: 0, HIGH: 0, CRITICAL: 0 } as Record<string, number>
+    );
 
     // C-3: sanitizar todos os valores controlados pelo usuário antes de interpolar
     const safeTitle = sanitizeForPrompt(campaign.title);
@@ -94,8 +101,8 @@ export async function POST(
     }));
 
     const contextStr = scope === "SECTOR"
-      ? `Setor: <sector>${safeSector}</sector> | Respostas: ${responses.length}`
-      : `Campanha: <title>${safeTitle}</title> | Total de respostas: ${responses.length}`;
+      ? `Setor: <sector>${safeSector}</sector> | Respostas: ${responseCount}`
+      : `Campanha: <title>${safeTitle}</title> | Total de respostas: ${responseCount}`;
 
     const prompt = `Você é um especialista em saúde ocupacional e riscos psicossociais conforme a NR-01 brasileira.
 

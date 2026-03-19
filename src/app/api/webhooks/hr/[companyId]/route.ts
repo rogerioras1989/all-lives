@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
+import { createHash, randomInt } from "crypto";
+import { hashCpf } from "@/lib/auth";
 
 type EmployeePayload = {
   name: string;
@@ -9,6 +11,12 @@ type EmployeePayload = {
   jobTitle?: string;
   cpf?: string;
 };
+
+const MAX_EMPLOYEES_PER_SYNC = 1000;
+
+function hashIntegrationKey(rawKey: string) {
+  return createHash("sha256").update(rawKey).digest("hex");
+}
 
 export async function POST(
   req: NextRequest,
@@ -21,7 +29,7 @@ export async function POST(
     if (!apiKey) return NextResponse.json({ error: "API key obrigatória" }, { status: 401 });
 
     const integration = await prisma.hrIntegration.findUnique({ where: { companyId } });
-    if (!integration || integration.apiKey !== apiKey) {
+    if (!integration || (integration.apiKey !== hashIntegrationKey(apiKey) && integration.apiKey !== apiKey)) {
       return NextResponse.json({ error: "API key inválida" }, { status: 401 });
     }
 
@@ -29,6 +37,9 @@ export async function POST(
     const employees: EmployeePayload[] = Array.isArray(body) ? body : body.employees;
     if (!Array.isArray(employees) || employees.length === 0) {
       return NextResponse.json({ error: "Payload deve ser array de funcionários" }, { status: 400 });
+    }
+    if (employees.length > MAX_EMPLOYEES_PER_SYNC) {
+      return NextResponse.json({ error: `Payload excede o limite de ${MAX_EMPLOYEES_PER_SYNC} funcionários por sincronização` }, { status: 400 });
     }
 
     let created = 0;
@@ -39,33 +50,57 @@ export async function POST(
       if (!emp.name) { errors.push(`Funcionário sem nome ignorado`); continue; }
 
       try {
-        if (emp.email) {
-          const existing = await prisma.user.findUnique({ where: { email: emp.email } });
-          if (existing) {
-            await prisma.user.update({
-              where: { email: emp.email },
-              data: {
-                name: emp.name,
-                sector: emp.sector,
-                jobTitle: emp.jobTitle,
-                companyId,
+        const normalizedEmail = emp.email?.trim().toLowerCase();
+        const cpfHash = emp.cpf ? hashCpf(emp.cpf) : undefined;
+        if (!normalizedEmail && !cpfHash) {
+          errors.push(`Funcionário ${emp.name} sem identificador único (email/cpf)`);
+          continue;
+        }
+
+        const existing = cpfHash
+          ? await prisma.user.findFirst({
+              where: {
+                OR: [
+                  { cpfHash },
+                  ...(normalizedEmail ? [{ email: normalizedEmail }] : []),
+                ],
               },
-            });
-            updated++;
-          } else {
-            await prisma.user.create({
-              data: {
-                name: emp.name,
-                email: emp.email,
-                sector: emp.sector,
-                jobTitle: emp.jobTitle,
-                companyId,
-                role: "EMPLOYEE",
-                pin: await bcrypt.hash("0000", 12),
-              },
-            });
-            created++;
+            })
+          : await prisma.user.findUnique({ where: { email: normalizedEmail } });
+
+        if (existing) {
+          if (existing.companyId && existing.companyId !== companyId) {
+            errors.push(`Conflito de identidade para ${emp.name}: usuário já pertence a outro tenant`);
+            continue;
           }
+
+          await prisma.user.update({
+            where: { id: existing.id },
+            data: {
+              name: emp.name,
+              email: normalizedEmail,
+              cpfHash: cpfHash ?? existing.cpfHash,
+              sector: emp.sector,
+              jobTitle: emp.jobTitle,
+              companyId,
+            },
+          });
+          updated++;
+        } else {
+          const rawPin = String(randomInt(100000, 999999));
+          await prisma.user.create({
+            data: {
+              name: emp.name,
+              email: normalizedEmail,
+              cpfHash,
+              sector: emp.sector,
+              jobTitle: emp.jobTitle,
+              companyId,
+              role: "EMPLOYEE",
+              pin: await bcrypt.hash(rawPin, 12),
+            },
+          });
+          created++;
         }
       } catch {
         errors.push(`Erro ao processar ${emp.name}`);

@@ -67,7 +67,7 @@ export async function GET(req: NextRequest) {
     });
   } catch (err: unknown) {
     if (err instanceof Error && (err.message === "UNAUTHORIZED" || err.message === "FORBIDDEN")) {
-      return NextResponse.json({ error: err.message }, { status: 401 });
+      return NextResponse.json({ error: err.message }, { status: err.message === "UNAUTHORIZED" ? 401 : 403 });
     }
     return NextResponse.json({ error: "Erro interno" }, { status: 500 });
   }

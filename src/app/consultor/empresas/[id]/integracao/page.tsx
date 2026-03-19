@@ -5,7 +5,8 @@ import { ConsultorTenantShell, useConsultorTenantData } from "@/components/Consu
 
 type Integration = {
   id: string;
-  apiKey: string;
+  apiKey?: string;
+  hasApiKey: boolean;
   lastSyncAt: string | null;
   syncLog: { created: number; updated: number; errors: string[]; total: number; syncedAt: string } | null;
 };
@@ -18,6 +19,7 @@ export default function IntegracaoPage() {
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [revealedApiKey, setRevealedApiKey] = useState<string | null>(null);
 
   useEffect(() => {
     fetch(`/api/companies/${id}/integrations`, { headers: { "x-company-id": id } })
@@ -34,15 +36,19 @@ export default function IntegracaoPage() {
         method: "POST",
         headers: { "x-company-id": id },
       });
-      if (res.ok) setIntegration(await res.json());
+      if (res.ok) {
+        const data = await res.json();
+        setIntegration(data);
+        setRevealedApiKey(data.apiKey ?? null);
+      }
     } finally {
       setGenerating(false);
     }
   }
 
   function copyKey() {
-    if (!integration?.apiKey) return;
-    navigator.clipboard.writeText(integration.apiKey);
+    if (!revealedApiKey) return;
+    navigator.clipboard.writeText(revealedApiKey);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   }
@@ -95,15 +101,22 @@ export default function IntegracaoPage() {
             </div>
           ) : integration ? (
             <div className="space-y-3">
-              <div className="flex items-center gap-2">
-                <code className="flex-1 text-xs px-3 py-2.5 rounded-lg font-mono"
-                  style={{ background: "rgba(91,158,201,0.08)", color: "#1e3a4a", wordBreak: "break-all" }}>
-                  {integration.apiKey}
-                </code>
-                <button onClick={copyKey} className="btn-ghost text-xs px-3 py-2 shrink-0">
-                  {copied ? "✓ Copiado" : "Copiar"}
-                </button>
-              </div>
+              {revealedApiKey ? (
+                <div className="flex items-center gap-2">
+                  <code className="flex-1 text-xs px-3 py-2.5 rounded-lg font-mono"
+                    style={{ background: "rgba(91,158,201,0.08)", color: "#1e3a4a", wordBreak: "break-all" }}>
+                    {revealedApiKey}
+                  </code>
+                  <button onClick={copyKey} className="btn-ghost text-xs px-3 py-2 shrink-0">
+                    {copied ? "✓ Copiado" : "Copiar"}
+                  </button>
+                </div>
+              ) : (
+                <div className="rounded-xl px-4 py-3 text-xs"
+                  style={{ background: "rgba(91,158,201,0.05)", color: "#5a7a8a", border: "1px solid rgba(91,158,201,0.12)" }}>
+                  A chave atual está armazenada com hash e não pode ser exibida novamente. Gere uma nova chave se precisar reenviar ao sistema de RH.
+                </div>
+              )}
               <div className="flex items-center justify-between">
                 {integration.lastSyncAt ? (
                   <p className="text-xs" style={{ color: "#7a9aaa" }}>
@@ -158,7 +171,7 @@ export default function IntegracaoPage() {
 ]`}
             </pre>
             <p className="text-xs mt-3" style={{ color: "#aac0cc" }}>
-              Funcionários existentes (por e-mail) serão atualizados. Novos serão criados com PIN padrão <strong>0000</strong>.
+              Funcionários existentes só são atualizados dentro do mesmo tenant. Novos registros recebem PIN aleatório e exigem provisionamento seguro fora do webhook.
             </p>
           </div>
         )}
