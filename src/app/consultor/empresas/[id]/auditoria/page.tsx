@@ -43,11 +43,21 @@ export default function AuditoriaPage() {
   const limit = 30;
 
   useEffect(() => {
-    setLoading(true);
-    fetch(`/api/audit?limit=${limit}&offset=${offset}`, { headers: { "x-company-id": id } })
-      .then((r) => r.json())
-      .then((d) => { setLogs(d.logs ?? []); setTotal(d.total ?? 0); setLoading(false); })
-      .catch(() => setLoading(false));
+    async function loadLogs() {
+      setLoading(true);
+      try {
+        const response = await fetch(`/api/audit?limit=${limit}&offset=${offset}`, {
+          headers: { "x-company-id": id },
+        });
+        const data = await response.json();
+        setLogs(data.logs ?? []);
+        setTotal(data.total ?? 0);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    void loadLogs();
   }, [id, offset]);
 
   function exportCSV() {

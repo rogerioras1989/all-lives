@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
-import { getTenantContext, requireCampaignOwnership, tenantError } from "@/lib/tenant";
+import {
+  getTenantContext,
+  requireCampaignOwnership,
+  requireTenantAnalytics,
+  tenantError,
+} from "@/lib/tenant";
 
 export const runtime = "nodejs";
 // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -14,6 +18,7 @@ export async function GET(
     const { id } = await params;
     const ctx = await getTenantContext(req);
     const campaign = await requireCampaignOwnership(id, ctx);
+    requireTenantAnalytics(ctx);
 
     // C-4: nunca usar Host header para construir URLs — open redirect via header injection
     const baseUrl = process.env.NEXTAUTH_URL;

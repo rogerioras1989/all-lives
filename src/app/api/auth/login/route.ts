@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import {
-  hashCpf, verifyPin, verifyTotp,
+  hashCpf, verifyTotp,
   signAccessToken, signRefreshToken,
   hashRefreshToken,
 } from "@/lib/auth";

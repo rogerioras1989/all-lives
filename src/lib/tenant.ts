@@ -7,7 +7,11 @@ export interface TenantContext {
   companyId: string;
   role: string;
   type: "user" | "consultant";
+  tenantRole?: string;
 }
+
+const COMPANY_ANALYTICS_ROLES = new Set(["SUPER_ADMIN", "ADMIN", "HR", "MANAGER"]);
+const COMPANY_MANAGEMENT_ROLES = new Set(["SUPER_ADMIN", "ADMIN", "HR"]);
 
 /**
  * Extracts the company context from the JWT.
@@ -35,6 +39,16 @@ export async function getTenantContext(req: NextRequest): Promise<TenantContext>
     req.headers.get("x-company-id");
   if (!companyId) throw new Error("COMPANY_REQUIRED");
 
+  if (payload.role === "OWNER") {
+    return {
+      userId: payload.sub,
+      companyId,
+      role: payload.role,
+      type: "consultant",
+      tenantRole: "OWNER",
+    };
+  }
+
   // fix #1 — validate that this consultant is actually linked to the requested company
   const link = await prisma.consultantCompany.findUnique({
     where: {
@@ -48,6 +62,7 @@ export async function getTenantContext(req: NextRequest): Promise<TenantContext>
     companyId,
     role: payload.role,
     type: "consultant",
+    tenantRole: link.role,
   };
 }
 
@@ -65,6 +80,7 @@ export async function requireCampaignOwnership(
   if (!campaign) throw new Error("NOT_FOUND");
 
   if (ctx.type === "consultant") {
+    if (ctx.role === "OWNER") return campaign;
     // Verify consultant is linked to that company
     const link = await prisma.consultantCompany.findUnique({
       where: {
@@ -82,6 +98,37 @@ export async function requireCampaignOwnership(
   return campaign;
 }
 
+export function canViewTenantAnalytics(ctx: TenantContext): boolean {
+  if (ctx.type === "consultant") return true;
+  return COMPANY_ANALYTICS_ROLES.has(ctx.role);
+}
+
+export function canManageTenant(ctx: TenantContext): boolean {
+  if (ctx.type === "consultant") {
+    if (ctx.role === "ANALYST") return false;
+    return !!ctx.tenantRole && ctx.tenantRole !== "VIEWER";
+  }
+  return COMPANY_MANAGEMENT_ROLES.has(ctx.role);
+}
+
+export function isManagerRestricted(ctx: TenantContext): boolean {
+  return ctx.type === "user" && ctx.role === "MANAGER";
+}
+
+export function isPlatformOwner(ctx: Pick<TenantContext, "type" | "role">): boolean {
+  return ctx.type === "consultant" && ctx.role === "OWNER";
+}
+
+export function requireTenantAnalytics(ctx: TenantContext): TenantContext {
+  if (!canViewTenantAnalytics(ctx)) throw new Error("FORBIDDEN_ROLE");
+  return ctx;
+}
+
+export function requireTenantManagement(ctx: TenantContext): TenantContext {
+  if (!canManageTenant(ctx)) throw new Error("FORBIDDEN_ROLE");
+  return ctx;
+}
+
 export function tenantError(err: unknown) {
   const msg = err instanceof Error ? err.message : "UNKNOWN";
   const map: Record<string, [string, number]> = {
@@ -90,6 +137,7 @@ export function tenantError(err: unknown) {
     COMPANY_REQUIRED: ["companyId obrigatório para consultores", 400],
     NOT_FOUND: ["Campanha não encontrada", 404],
     FORBIDDEN: ["Acesso negado a esta campanha", 403],
+    FORBIDDEN_ROLE: ["Permissão insuficiente para esta ação", 403],
   };
   const [error, status] = map[msg] ?? ["Erro interno", 500];
   return { error, status };

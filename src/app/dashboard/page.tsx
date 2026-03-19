@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { SidebarShell } from "@/components/SidebarShell";
 import {
   RadarChart, PolarGrid, PolarAngleAxis, Radar, ResponsiveContainer,
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Cell,
@@ -21,6 +22,16 @@ type DashboardData = {
 type Campaign = { id: string; title: string; status: string; slug: string; _count: { responses: number } };
 type Me = { id: string; name: string; role: string; companyId: string; company: { id: string; name: string; slug: string } };
 type Alert = { id: string; sector: string; message: string; riskLevel: string; createdAt: string };
+type AnonymousResponse = {
+  id: string;
+  sector: string;
+  jobTitle: string | null;
+  totalScore: number | null;
+  riskLevel: string | null;
+  createdAt: string;
+  scores: { topicId: number; topicName: string; score: number; riskLevel: string }[];
+  comments: { id: string; topicId: number; text: string; createdAt: string }[];
+};
 
 const RISK_COLORS: Record<string, string> = { LOW: "#5baa6d", MEDIUM: "#f59e0b", HIGH: "#f97316", CRITICAL: "#dc2626" };
 const RISK_LABELS: Record<string, string> = { LOW: "Baixo", MEDIUM: "Moderado", HIGH: "Alto", CRITICAL: "Crítico" };
@@ -180,12 +191,21 @@ export default function DashboardPage() {
   const [endDate, setEndDate] = useState("");
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [compareMode, setCompareMode] = useState(false);
+  const [anonymousResponses, setAnonymousResponses] = useState<AnonymousResponse[]>([]);
+  const [responsesLoading, setResponsesLoading] = useState(false);
+  const [responsesOffset, setResponsesOffset] = useState(0);
+  const [responsesTotal, setResponsesTotal] = useState(0);
 
   useEffect(() => {
     fetch("/api/me")
       .then((r) => { if (r.status === 401) { router.push("/login"); return null; } return r.json(); })
       .then((user: Me | null) => {
         if (!user?.companyId) return;
+        if (user.role === "EMPLOYEE") {
+          router.push("/portal");
+          setLoading(false);
+          return null;
+        }
         setMe(user);
         if (!localStorage.getItem("drps_onboarded")) setShowOnboarding(true);
         return fetch(`/api/companies/${user.companyId}/campaigns`);
@@ -225,7 +245,37 @@ export default function DashboardPage() {
       .then((r) => r.json()).then((d) => { if (!d.error) setCompareData(d); });
   }, [compareCampaignId, compareMode]);
 
-  useEffect(() => { setSector("all"); setData(null); setQrCode(null); setAiResult(null); setStartDate(""); setEndDate(""); }, [activeCampaignId]);
+  useEffect(() => {
+    setSector("all");
+    setData(null);
+    setQrCode(null);
+    setAiResult(null);
+    setStartDate("");
+    setEndDate("");
+    setResponsesOffset(0);
+  }, [activeCampaignId]);
+
+  useEffect(() => {
+    setResponsesOffset(0);
+  }, [sector]);
+
+  useEffect(() => {
+    if (!activeCampaignId) return;
+    setResponsesLoading(true);
+    const params = new URLSearchParams();
+    params.set("take", "12");
+    params.set("skip", String(responsesOffset));
+    if (sector !== "all") params.set("sector", sector);
+
+    fetch(`/api/campaigns/${activeCampaignId}/anonymous-responses?${params.toString()}`)
+      .then((response) => response.json())
+      .then((payload) => {
+        setAnonymousResponses(payload.responses ?? []);
+        setResponsesTotal(payload.total ?? 0);
+        setResponsesLoading(false);
+      })
+      .catch(() => setResponsesLoading(false));
+  }, [activeCampaignId, sector, responsesOffset]);
 
   async function loadQr() {
     if (qrCode) { setShowQr(true); return; }
@@ -261,9 +311,20 @@ export default function DashboardPage() {
   const compareBarData = compareData?.topicAverages.map((t) => ({ name: `T${t.topicId}`, fullName: t.topicName, score: Math.round(t.averageScore), fill: RISK_COLORS[getRisk(t.averageScore)] })) ?? [];
   const activeCampaign = campaigns.find((c) => c.id === activeCampaignId);
   const compareCampaign = campaigns.find((c) => c.id === compareCampaignId);
+  const roleLabel = me?.role === "MANAGER" ? "Gestor de setor" : me?.role === "HR" ? "RH" : me?.role === "ADMIN" ? "Administrador" : me?.role ?? "";
 
   return (
-    <main className="min-h-screen gradient-hero pb-16">
+    <SidebarShell
+      badge="Dashboard da Empresa"
+      title={me?.company?.name ?? "Tenant"}
+      subtitle="Analytics corporativo anônimo por campanha, setor e submissão."
+      userName={me?.name}
+      userRole={roleLabel}
+      nav={[
+        { href: "/dashboard", label: "Visão geral", icon: "📊" },
+        { href: "/portal", label: "Meu portal", icon: "🌱" },
+      ]}
+    >
       {showOnboarding && <OnboardingTour onClose={closeOnboarding} />}
 
       {/* Header */}
@@ -569,9 +630,113 @@ export default function DashboardPage() {
                 </div>
               </div>
             )}
+
+            <div className="card-3d-sm overflow-hidden mt-6">
+              <div className="px-6 py-4 border-b flex items-center justify-between gap-3" style={{ borderColor: "rgba(91,158,201,0.1)" }}>
+                <div>
+                  <h2 className="text-sm font-semibold" style={{ color: "#1e3a4a" }}>Submissões anônimas</h2>
+                  <p className="mt-1 text-xs" style={{ color: "#7a9aaa" }}>
+                    Visualização por resposta sem identificação do colaborador.
+                  </p>
+                </div>
+                <span className="text-xs" style={{ color: "#7a9aaa" }}>
+                  {responsesTotal} resposta(s)
+                </span>
+              </div>
+
+              {responsesLoading ? (
+                <div className="py-12 flex justify-center">
+                  <div className="w-6 h-6 border-2 rounded-full animate-spin" style={{ borderColor: "#2e7fa3", borderTopColor: "transparent" }} />
+                </div>
+              ) : anonymousResponses.length === 0 ? (
+                <div className="px-6 py-10 text-center text-sm" style={{ color: "#aac0cc" }}>
+                  Nenhuma submissão disponível para o filtro atual.
+                </div>
+              ) : (
+                <div className="divide-y" style={{ borderColor: "rgba(91,158,201,0.08)" }}>
+                  {anonymousResponses.map((response, index) => (
+                    <div key={response.id} className="px-6 py-5">
+                      <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                        <div>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="text-sm font-semibold" style={{ color: "#1e3a4a" }}>
+                              Resposta #{responsesOffset + index + 1}
+                            </span>
+                            {response.riskLevel && (
+                              <span className="px-2 py-0.5 rounded-full text-xs font-semibold" style={{ background: RISK_BG[response.riskLevel], color: RISK_COLORS[response.riskLevel] }}>
+                                {RISK_LABELS[response.riskLevel]}
+                              </span>
+                            )}
+                            <span className="text-xs" style={{ color: "#7a9aaa" }}>
+                              {new Date(response.createdAt).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}
+                            </span>
+                          </div>
+                          <p className="mt-1 text-xs" style={{ color: "#7a9aaa" }}>
+                            Setor: <strong style={{ color: "#1e5f7a" }}>{response.sector}</strong>
+                            {response.jobTitle && <span> · Cargo: <strong style={{ color: "#1e5f7a" }}>{response.jobTitle}</strong></span>}
+                            {response.totalScore !== null && <span> · Score geral: <strong style={{ color: "#1e5f7a" }}>{Math.round(response.totalScore)}%</strong></span>}
+                          </p>
+                        </div>
+
+                        <div className="rounded-2xl px-4 py-3 lg:min-w-[280px]" style={{ background: "rgba(91,158,201,0.05)", border: "1px solid rgba(91,158,201,0.12)" }}>
+                          <p className="text-xs font-semibold mb-2" style={{ color: "#1e3a4a" }}>Scores por tópico</p>
+                          <div className="space-y-2">
+                            {response.scores.map((score) => (
+                              <div key={`${response.id}-${score.topicId}`}>
+                                <div className="flex items-center justify-between gap-2">
+                                  <span className="text-xs" style={{ color: "#5a7a8a" }}>{score.topicName}</span>
+                                  <span className="text-xs font-semibold" style={{ color: RISK_COLORS[score.riskLevel] }}>{Math.round(score.score)}%</span>
+                                </div>
+                                <div className="mt-1 h-1.5 rounded-full" style={{ background: "rgba(91,158,201,0.12)" }}>
+                                  <div className="h-1.5 rounded-full" style={{ width: `${score.score}%`, background: RISK_COLORS[score.riskLevel] }} />
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+
+                      {response.comments.length > 0 && (
+                        <div className="mt-4 rounded-2xl p-4" style={{ background: "rgba(91,170,109,0.06)", border: "1px solid rgba(91,170,109,0.12)" }}>
+                          <p className="text-xs font-semibold mb-2" style={{ color: "#3d8a50" }}>Comentários anônimos</p>
+                          <div className="space-y-2">
+                            {response.comments.map((comment) => (
+                              <div key={comment.id} className="text-xs" style={{ color: "#5a7a8a" }}>
+                                <strong style={{ color: "#1e5f7a" }}>Tópico {comment.topicId}:</strong> {comment.text}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {responsesTotal > 12 && (
+                <div className="px-6 py-4 border-t flex justify-between" style={{ borderColor: "rgba(91,158,201,0.1)" }}>
+                  <button
+                    onClick={() => setResponsesOffset((value) => Math.max(0, value - 12))}
+                    disabled={responsesOffset === 0}
+                    className="btn-ghost text-xs px-3 py-2"
+                    style={{ opacity: responsesOffset === 0 ? 0.45 : 1 }}
+                  >
+                    ← Anteriores
+                  </button>
+                  <button
+                    onClick={() => setResponsesOffset((value) => value + 12)}
+                    disabled={responsesOffset + 12 >= responsesTotal}
+                    className="btn-ghost text-xs px-3 py-2"
+                    style={{ opacity: responsesOffset + 12 >= responsesTotal ? 0.45 : 1 }}
+                  >
+                    Próximas →
+                  </button>
+                </div>
+              )}
+            </div>
           </>
         )}
       </div>
-    </main>
+    </SidebarShell>
   );
 }

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getTenantContext, tenantError } from "@/lib/tenant";
+import { getTenantContext, requireTenantManagement, tenantError } from "@/lib/tenant";
 
 export async function PATCH(
   req: NextRequest,
@@ -9,6 +9,7 @@ export async function PATCH(
   try {
     const { id } = await params;
     const ctx = await getTenantContext(req);
+    requireTenantManagement(ctx);
 
     const existing = await prisma.actionPlan.findUnique({ where: { id } });
     if (!existing) return NextResponse.json({ error: "Não encontrado" }, { status: 404 });
@@ -55,6 +56,7 @@ export async function DELETE(
   try {
     const { id } = await params;
     const ctx = await getTenantContext(req);
+    requireTenantManagement(ctx);
 
     const existing = await prisma.actionPlan.findUnique({ where: { id } });
     if (!existing) return NextResponse.json({ error: "Não encontrado" }, { status: 404 });

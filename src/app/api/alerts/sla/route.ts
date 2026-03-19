@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getTenantContext, tenantError } from "@/lib/tenant";
+import { getTenantContext, requireTenantAnalytics, requireTenantManagement, tenantError } from "@/lib/tenant";
 
 const SLA_HOURS: Record<string, number> = {
   CRITICAL: 24,
@@ -12,6 +12,7 @@ const SLA_HOURS: Record<string, number> = {
 export async function GET(req: NextRequest) {
   try {
     const ctx = await getTenantContext(req);
+    requireTenantAnalytics(ctx);
     const alerts = await prisma.sectorAlert.findMany({
       where: { companyId: ctx.companyId, resolvedAt: null },
       orderBy: { createdAt: "desc" },
@@ -45,6 +46,7 @@ export async function GET(req: NextRequest) {
 export async function PATCH(req: NextRequest) {
   try {
     const ctx = await getTenantContext(req);
+    requireTenantManagement(ctx);
     const body = await req.json();
     const { id, action } = body;
 

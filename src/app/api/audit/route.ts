@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getTenantContext, tenantError } from "@/lib/tenant";
+import { getTenantContext, requireTenantAnalytics, requireTenantManagement, tenantError } from "@/lib/tenant";
 
 export async function GET(req: NextRequest) {
   try {
     const ctx = await getTenantContext(req);
+    requireTenantAnalytics(ctx);
     const { searchParams } = new URL(req.url);
     const limit = Math.min(parseInt(searchParams.get("limit") ?? "50"), 200);
     const offset = parseInt(searchParams.get("offset") ?? "0");
@@ -29,6 +30,7 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const ctx = await getTenantContext(req);
+    requireTenantManagement(ctx);
     const body = await req.json();
     const { action, entityType, entityId, metadata } = body;
 

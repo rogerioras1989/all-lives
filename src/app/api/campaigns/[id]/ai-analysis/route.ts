@@ -1,7 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import Anthropic from "@anthropic-ai/sdk";
-import { getTenantContext, requireCampaignOwnership, tenantError } from "@/lib/tenant";
+import {
+  getTenantContext,
+  requireCampaignOwnership,
+  requireTenantAnalytics,
+  tenantError,
+} from "@/lib/tenant";
 
 const client = new Anthropic();
 
@@ -23,6 +28,7 @@ export async function POST(
     const { id } = await params;
     const ctx = await getTenantContext(req);
     await requireCampaignOwnership(id, ctx);
+    requireTenantAnalytics(ctx);
 
     const { scope = "CAMPAIGN", sector } = await req.json();
 
@@ -145,6 +151,7 @@ export async function GET(
     const { id } = await params;
     const ctx = await getTenantContext(req);
     await requireCampaignOwnership(id, ctx);
+    requireTenantAnalytics(ctx);
 
     const analyses = await prisma.aiAnalysis.findMany({
       where: { campaignId: id },

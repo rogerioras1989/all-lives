@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
       if (!valid) return NextResponse.json({ error: "Invalid" }, { status: 401 });
 
       const accessToken = signAccessToken({
-        sub: consultant.id, role: "CONSULTANT", type: "consultant",
+        sub: consultant.id, role: consultant.globalRole, type: "consultant",
       });
       const newRefresh = signRefreshToken({ sub: consultant.id, type: "consultant" });
       await prisma.consultant.update({

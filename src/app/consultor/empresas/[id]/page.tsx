@@ -76,8 +76,13 @@ export default function EmpresaDashboardPage() {
   const [showPlanForm, setShowPlanForm] = useState(false);
   const [planForm, setPlanForm] = useState({ title: "", description: "", sector: "", assignedTo: "", dueDate: "" });
   const [savingPlan, setSavingPlan] = useState(false);
+  const [viewerRole, setViewerRole] = useState("CONSULTANT");
 
   useEffect(() => {
+    fetch("/api/me")
+      .then((r) => r.status === 200 ? r.json() : null)
+      .then((d) => { if (d?.type === "consultant" && d.role) setViewerRole(d.role); });
+
     fetch(`/api/campaigns/${campaignId}/snapshot`)
       .then((r) => r.json())
       .then((d) => { setSnapshots(d.snapshots ?? []); setSnapshotLoading(false); })
@@ -178,6 +183,7 @@ export default function EmpresaDashboardPage() {
     key: `T${t.topicId}`,
     name: t.topicName,
   })) ?? [];
+  const readOnly = viewerRole === "ANALYST";
 
   return (
     <main className="min-h-screen gradient-hero pb-16">
@@ -195,7 +201,7 @@ export default function EmpresaDashboardPage() {
             <Link href={`/consultor/empresas/${id}/auditoria`} className="btn-ghost text-xs px-3 py-2">📋 Auditoria</Link>
             <Link href={`/consultor/empresas/${id}/integracao`} className="btn-ghost text-xs px-3 py-2">🔗 Integração RH</Link>
             <a href={`/api/campaigns/${campaignId}/pdf`} target="_blank" className="btn-ghost text-xs px-3 py-2">📄 PDF</a>
-            <button onClick={takeSnapshot} disabled={takingSnapshot} className="btn-primary text-xs px-3 py-2">
+            <button onClick={takeSnapshot} disabled={takingSnapshot || readOnly} className="btn-primary text-xs px-3 py-2" style={{ opacity: readOnly ? 0.5 : 1 }}>
               📸 {takingSnapshot ? "Salvando…" : "Snapshot"}
             </button>
           </div>
@@ -356,10 +362,10 @@ export default function EmpresaDashboardPage() {
                       </div>
                     </div>
                     <div className="flex gap-2 shrink-0">
-                      {!alert.acknowledgedAt && (
+                      {!readOnly && !alert.acknowledgedAt && (
                         <button onClick={() => acknowledgeAlert(alert.id)} className="btn-ghost text-xs px-2 py-1">Ciente</button>
                       )}
-                      <button onClick={() => resolveAlert(alert.id)} className="btn-primary text-xs px-2 py-1">Resolver</button>
+                      {!readOnly && <button onClick={() => resolveAlert(alert.id)} className="btn-primary text-xs px-2 py-1">Resolver</button>}
                     </div>
                   </div>
                 </div>
@@ -372,7 +378,7 @@ export default function EmpresaDashboardPage() {
         <div className="card-3d-sm overflow-hidden mb-8 fade-up">
           <div className="px-6 py-4 border-b flex items-center justify-between" style={{ borderColor: "rgba(91,158,201,0.1)" }}>
             <h2 className="text-sm font-semibold" style={{ color: "#1e3a4a" }}>📌 Planos de Ação</h2>
-            <button onClick={() => setShowPlanForm(true)} className="btn-primary text-xs px-3 py-1.5">+ Novo plano</button>
+            {!readOnly && <button onClick={() => setShowPlanForm(true)} className="btn-primary text-xs px-3 py-1.5">+ Novo plano</button>}
           </div>
 
           {showPlanForm && (
@@ -425,7 +431,7 @@ export default function EmpresaDashboardPage() {
                       <p className="text-sm font-medium" style={{ color: "#1e3a4a" }}>{plan.title}</p>
                       {plan.description && <p className="text-xs mt-1" style={{ color: "#7a9aaa" }}>{plan.description}</p>}
                     </div>
-                    {plan.status !== "DONE" && plan.status !== "CANCELLED" && (
+                    {!readOnly && plan.status !== "DONE" && plan.status !== "CANCELLED" && (
                       <div className="flex gap-1 shrink-0">
                         {plan.status === "PENDING" && (
                           <button onClick={() => updatePlanStatus(plan.id, "IN_PROGRESS")} className="btn-ghost text-xs px-2 py-1">Iniciar</button>

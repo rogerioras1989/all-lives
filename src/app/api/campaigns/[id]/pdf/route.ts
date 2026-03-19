@@ -3,7 +3,12 @@ import { prisma } from "@/lib/prisma";
 import { renderToBuffer } from "@react-pdf/renderer";
 import React from "react";
 import { DrpsReport } from "@/lib/pdf-report";
-import { getTenantContext, requireCampaignOwnership, tenantError } from "@/lib/tenant";
+import {
+  getTenantContext,
+  requireCampaignOwnership,
+  requireTenantAnalytics,
+  tenantError,
+} from "@/lib/tenant";
 
 export const runtime = "nodejs";
 
@@ -22,6 +27,7 @@ export async function GET(
     const { id } = await params;
     const ctx = await getTenantContext(req);
     await requireCampaignOwnership(id, ctx);
+    requireTenantAnalytics(ctx);
 
     // fix #18 — use aggregation queries instead of loading all responses into memory
     const campaign = await prisma.campaign.findUnique({

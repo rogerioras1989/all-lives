@@ -1,6 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getTenantContext, requireCampaignOwnership, tenantError } from "@/lib/tenant";
+import {
+  getTenantContext,
+  requireCampaignOwnership,
+  requireTenantAnalytics,
+  requireTenantManagement,
+  tenantError,
+} from "@/lib/tenant";
 
 export async function POST(
   req: NextRequest,
@@ -10,6 +16,7 @@ export async function POST(
     const { id } = await params;
     const ctx = await getTenantContext(req);
     await requireCampaignOwnership(id, ctx);
+    requireTenantManagement(ctx);
 
     // fix #12 — usar aggregações em vez de carregar todas as respostas em memória
     const totalResponses = await prisma.response.count({ where: { campaignId: id } });
@@ -80,6 +87,7 @@ export async function GET(
     const { id } = await params;
     const ctx = await getTenantContext(req);
     await requireCampaignOwnership(id, ctx);
+    requireTenantAnalytics(ctx);
 
     const url = new URL(req.url);
     // fix #15 — pagination (default last 100 snapshots for charts)

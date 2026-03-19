@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getTenantContext, tenantError } from "@/lib/tenant";
+import { getTenantContext, requireTenantAnalytics, requireTenantManagement, tenantError } from "@/lib/tenant";
 
 export async function GET(
   req: NextRequest,
@@ -9,6 +9,7 @@ export async function GET(
   try {
     const { id: companyId } = await params;
     const ctx = await getTenantContext(req);
+    requireTenantAnalytics(ctx);
 
     // User must belong to this company; consultant must be linked
     if (ctx.type === "user" && ctx.companyId !== companyId) {
@@ -45,8 +46,9 @@ export async function POST(
   try {
     const { id: companyId } = await params;
     const ctx = await getTenantContext(req);
+    requireTenantManagement(ctx);
 
-    if (ctx.type === "user" && !["ADMIN", "HR", "MANAGER"].includes(ctx.role)) {
+    if (ctx.type === "user" && !["ADMIN", "HR", "SUPER_ADMIN"].includes(ctx.role)) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
     if (ctx.type === "user" && ctx.companyId !== companyId) {

@@ -347,7 +347,7 @@ export default function LandingPage() {
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(280px,1fr))", gap: 24 }}>
             {TESTIMONIALS.map((t, i) => (
               <div key={i} className="sr" style={{ transitionDelay: `${i * 120}ms`, background: "rgba(255,255,255,0.03)", border: "1px solid rgba(91,158,201,0.14)", borderRadius: 20, padding: 32 }}>
-                <div style={{ fontSize: 32, marginBottom: 16, color: "rgba(255,255,255,0.15)" }}>"</div>
+                <div style={{ fontSize: 32, marginBottom: 16, color: "rgba(255,255,255,0.15)" }}>&quot;</div>
                 <p style={{ color: "rgba(255,255,255,0.7)", lineHeight: 1.75, fontSize: 15, marginBottom: 24, fontStyle: "italic" }}>{t.text}</p>
                 <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                   <div style={{ width: 40, height: 40, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, fontSize: 14, color: "white", background: t.color, flexShrink: 0 }}>

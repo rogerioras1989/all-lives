@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getTenantContext, requireCampaignOwnership, tenantError } from "@/lib/tenant";
+import {
+  getTenantContext,
+  requireCampaignOwnership,
+  requireTenantAnalytics,
+  tenantError,
+} from "@/lib/tenant";
 
 export async function GET(
   req: NextRequest,
@@ -10,6 +15,7 @@ export async function GET(
     const { id } = await params;
     const ctx = await getTenantContext(req);
     await requireCampaignOwnership(id, ctx);
+    requireTenantAnalytics(ctx);
 
     const { searchParams } = new URL(req.url);
     const topicId = searchParams.get("topicId");

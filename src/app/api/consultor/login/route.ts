@@ -85,7 +85,7 @@ export async function POST(req: NextRequest) {
 
     const accessToken = signAccessToken({
       sub: consultant.id,
-      role: "CONSULTANT",
+      role: consultant.globalRole,
       type: "consultant",
     });
     const refreshToken = signRefreshToken({ sub: consultant.id, type: "consultant" });

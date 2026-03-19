@@ -2,7 +2,7 @@
 
 import { useState, useRef, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
-import { TOPICS, SECTORS, SCALE_LABELS } from "@/data/questionnaire";
+import { TOPICS, SECTORS } from "@/data/questionnaire";
 import Image from "next/image";
 import Link from "next/link";
 

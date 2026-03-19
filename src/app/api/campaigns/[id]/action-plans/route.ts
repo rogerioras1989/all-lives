@@ -1,6 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getTenantContext, requireCampaignOwnership, tenantError } from "@/lib/tenant";
+import {
+  getTenantContext,
+  requireCampaignOwnership,
+  requireTenantAnalytics,
+  requireTenantManagement,
+  tenantError,
+} from "@/lib/tenant";
 
 export async function GET(
   req: NextRequest,
@@ -10,6 +16,7 @@ export async function GET(
     const { id } = await params;
     const ctx = await getTenantContext(req);
     await requireCampaignOwnership(id, ctx);
+    requireTenantAnalytics(ctx);
 
     const plans = await prisma.actionPlan.findMany({
       where: { campaignId: id, companyId: ctx.companyId },
@@ -30,6 +37,7 @@ export async function POST(
     const { id } = await params;
     const ctx = await getTenantContext(req);
     await requireCampaignOwnership(id, ctx);
+    requireTenantManagement(ctx);
 
     const body = await req.json();
     const { title, description, sector, assignedTo, dueDate } = body;

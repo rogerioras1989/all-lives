@@ -11,34 +11,60 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    // fix #14 — usar _count para totalUsers (evita carregar todos os IDs) + limitar campanhas
-    const links = await prisma.consultantCompany.findMany({
-      where: { consultantId: payload.sub },
-      include: {
-        company: {
+    const companies = payload.role === "OWNER"
+      ? (await prisma.company.findMany({
+          orderBy: { name: "asc" },
           include: {
             campaigns: {
               select: { id: true, title: true, status: true, slug: true, createdAt: true },
               orderBy: { createdAt: "desc" },
               take: 20,
             },
-            _count: { select: { users: true } },
+            _count: { select: { users: true, campaigns: true, alerts: true, actionPlans: true } },
           },
-        },
-      },
+        })).map((company) => ({
+          id: company.id,
+          name: company.name,
+          cnpj: company.cnpj,
+          slug: company.slug,
+          role: "OWNER",
+          totalUsers: company._count.users,
+          totalCampaigns: company._count.campaigns,
+          totalAlerts: company._count.alerts,
+          totalActionPlans: company._count.actionPlans,
+          campaigns: company.campaigns,
+        }))
+      : (await prisma.consultantCompany.findMany({
+          where: { consultantId: payload.sub },
+          include: {
+            company: {
+              include: {
+                campaigns: {
+                  select: { id: true, title: true, status: true, slug: true, createdAt: true },
+                  orderBy: { createdAt: "desc" },
+                  take: 20,
+                },
+                _count: { select: { users: true, campaigns: true, alerts: true, actionPlans: true } },
+              },
+            },
+          },
+        })).map((l) => ({
+          id: l.company.id,
+          name: l.company.name,
+          cnpj: l.company.cnpj,
+          slug: l.company.slug,
+          role: l.role,
+          totalUsers: l.company._count.users,
+          totalCampaigns: l.company._count.campaigns,
+          totalAlerts: l.company._count.alerts,
+          totalActionPlans: l.company._count.actionPlans,
+          campaigns: l.company.campaigns,
+        }));
+
+    return NextResponse.json({
+      companies,
+      viewer: { id: payload.sub, role: payload.role },
     });
-
-    const companies = links.map((l) => ({
-      id: l.company.id,
-      name: l.company.name,
-      cnpj: l.company.cnpj,
-      slug: l.company.slug,
-      role: l.role,
-      totalUsers: l.company._count.users,
-      campaigns: l.company.campaigns,
-    }));
-
-    return NextResponse.json({ companies });
   } catch (err: unknown) {
     if (err instanceof Error && (err.message === "UNAUTHORIZED" || err.message === "FORBIDDEN")) {
       return NextResponse.json({ error: err.message }, { status: 401 });

@@ -1,6 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getTenantContext, requireCampaignOwnership, tenantError } from "@/lib/tenant";
+import {
+  getTenantContext,
+  isManagerRestricted,
+  requireCampaignOwnership,
+  requireTenantAnalytics,
+  tenantError,
+} from "@/lib/tenant";
 
 export async function GET(
   req: NextRequest,
@@ -10,10 +16,11 @@ export async function GET(
     const { id } = await params;
     const ctx = await getTenantContext(req);
     await requireCampaignOwnership(id, ctx);
+    requireTenantAnalytics(ctx);
 
     // Feature 6: MANAGER sees only their own sector
     let managerSector: string | undefined;
-    if (ctx.type === "user" && ctx.role === "MANAGER") {
+    if (isManagerRestricted(ctx)) {
       const user = await prisma.user.findUnique({ where: { id: ctx.userId }, select: { sector: true } });
       managerSector = user?.sector ?? undefined;
     }

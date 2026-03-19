@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getTenantContext, tenantError } from "@/lib/tenant";
+import { getTenantContext, requireTenantManagement, tenantError } from "@/lib/tenant";
 import { randomUUID } from "crypto";
 
 export async function GET(
@@ -10,6 +10,7 @@ export async function GET(
   try {
     const { id } = await params;
     const ctx = await getTenantContext(req);
+    requireTenantManagement(ctx);
     if (ctx.companyId !== id) return NextResponse.json({ error: "Acesso negado" }, { status: 403 });
 
     const integration = await prisma.hrIntegration.findUnique({ where: { companyId: id } });
@@ -27,6 +28,7 @@ export async function POST(
   try {
     const { id } = await params;
     const ctx = await getTenantContext(req);
+    requireTenantManagement(ctx);
     if (ctx.companyId !== id && ctx.type !== "consultant") return NextResponse.json({ error: "Acesso negado" }, { status: 403 });
 
     const integration = await prisma.hrIntegration.upsert({

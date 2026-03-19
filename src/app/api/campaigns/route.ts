@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getTenantContext, tenantError } from "@/lib/tenant";
+import { getTenantContext, requireTenantAnalytics, requireTenantManagement, tenantError } from "@/lib/tenant";
 
 // fix #1 — ambas as rotas agora exigem autenticação e isolamento por tenant
 export async function GET(req: NextRequest) {
   try {
     const ctx = await getTenantContext(req);
+    requireTenantAnalytics(ctx);
     const campaigns = await prisma.campaign.findMany({
       where: { companyId: ctx.companyId },
       orderBy: { createdAt: "desc" },
@@ -24,6 +25,7 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const ctx = await getTenantContext(req);
+    requireTenantManagement(ctx);
     const body = await req.json();
     const { title, description, startDate, endDate } = body;
 

@@ -1,8 +1,9 @@
 "use client";
-import { useEffect, useState } from "react";
-import Image from "next/image";
+
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { SidebarShell } from "@/components/SidebarShell";
 
 type Campaign = {
   id: string;
@@ -12,14 +13,31 @@ type Campaign = {
   createdAt: string;
 };
 
-type Company = {
+type CompanyCard = {
   id: string;
   name: string;
-  cnpj: string | null;
   slug: string;
-  role: string;
   totalUsers: number;
-  campaigns: Campaign[];
+  totalCampaigns: number;
+  totalResponses: number;
+  activeCampaigns: number;
+  unresolvedAlerts: number;
+  openActionPlans: number;
+  lastCampaign: Campaign | null;
+};
+
+type OverviewData = {
+  viewer: { id: string; role: string };
+  totals: {
+    companies: number;
+    totalUsers: number;
+    totalCampaigns: number;
+    totalResponses: number;
+    activeCampaigns: number;
+    unresolvedAlerts: number;
+    openActionPlans: number;
+  };
+  companies: CompanyCard[];
 };
 
 const STATUS_LABEL: Record<string, string> = {
@@ -36,250 +54,222 @@ const STATUS_COLOR: Record<string, string> = {
   ARCHIVED: "#9ca3af",
 };
 
+const ROLE_LABEL: Record<string, string> = {
+  OWNER: "Owner da plataforma",
+  CONSULTANT: "Consultor All Lives",
+  ANALYST: "Analista All Lives",
+};
+
 export default function ConsultorPage() {
   const router = useRouter();
-  const [companies, setCompanies] = useState<Company[]>([]);
+  const [data, setData] = useState<OverviewData | null>(null);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [expanded, setExpanded] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch("/api/consultor/companies")
-      .then((r) => {
-        if (r.status === 401) { router.push("/consultor/login"); return null; }
-        return r.json();
+    fetch("/api/consultor/overview")
+      .then((response) => {
+        if (response.status === 401 || response.status === 403) {
+          router.push("/consultor/login");
+          return null;
+        }
+        return response.json();
       })
-      .then((d) => {
-        if (d) setCompanies(d.companies ?? []);
+      .then((payload) => {
+        if (payload) setData(payload);
         setLoading(false);
       })
       .catch(() => setLoading(false));
   }, [router]);
 
-  const filtered = companies.filter((c) =>
-    c.name.toLowerCase().includes(search.toLowerCase()) ||
-    (c.cnpj ?? "").includes(search)
+  const filteredCompanies = useMemo(
+    () =>
+      (data?.companies ?? []).filter((company) =>
+        company.name.toLowerCase().includes(search.toLowerCase())
+      ),
+    [data?.companies, search]
   );
 
   if (loading) {
     return (
       <main className="min-h-screen gradient-hero flex items-center justify-center">
         <div className="flex flex-col items-center gap-3">
-          <div className="w-8 h-8 border-2 rounded-full animate-spin"
-            style={{ borderColor: "#2e7fa3", borderTopColor: "transparent" }} />
-          <p className="text-sm" style={{ color: "#7a9aaa" }}>Carregando empresas...</p>
+          <div className="h-8 w-8 animate-spin rounded-full border-2" style={{ borderColor: "#2e7fa3", borderTopColor: "transparent" }} />
+          <p className="text-sm" style={{ color: "#7a9aaa" }}>Carregando visão global...</p>
         </div>
       </main>
     );
   }
 
+  if (!data) {
+    return null;
+  }
+
+  const viewerRoleLabel = ROLE_LABEL[data.viewer.role] ?? data.viewer.role;
+  const canManageTenants = data.viewer.role !== "ANALYST";
+
   return (
-    <main className="min-h-screen gradient-hero pb-16">
-      {/* Header */}
-      <header className="bg-white/70 backdrop-blur-md border-b border-white/60 sticky top-0 z-20"
-        style={{ boxShadow: "0 1px 12px rgba(30,95,122,0.08)" }}>
-        <div className="max-w-5xl mx-auto px-6 py-3 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <Image
-              src="https://all-livesocupacional.com.br/wp-content/uploads/2025/01/AllLivesPreferencial-copiar.png.webp"
-              alt="All Lives" width={110} height={35} className="object-contain" unoptimized
-            />
-            <span className="text-xs font-bold px-2.5 py-1 rounded-full"
-              style={{ background: "rgba(91,158,201,0.12)", color: "#1e5f7a" }}>
-              Painel Consultor
-            </span>
+    <SidebarShell
+      badge="Backoffice All Lives"
+      title="Visão Global"
+      subtitle="Acompanhe todos os tenants, campanhas ativas, alertas e operação da carteira em um único painel."
+      userName="Equipe All Lives"
+      userRole={viewerRoleLabel}
+      nav={[
+        { href: "/consultor", label: "Dashboard global", icon: "🌐" },
+      ]}
+      actions={<Link href="/" className="btn-ghost text-xs px-3 py-2">← Home</Link>}
+    >
+      <div className="mb-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        {[
+          { label: "Empresas", value: data.totals.companies, icon: "🏢", color: "#2e7fa3" },
+          { label: "Campanhas ativas", value: data.totals.activeCampaigns, icon: "✅", color: "#5baa6d" },
+          { label: "Respostas anônimas", value: data.totals.totalResponses, icon: "📝", color: "#1e5f7a" },
+          { label: "Alertas abertos", value: data.totals.unresolvedAlerts, icon: "🚨", color: "#dc2626" },
+          { label: "Funcionários", value: data.totals.totalUsers, icon: "👥", color: "#2e7fa3" },
+          { label: "Planos abertos", value: data.totals.openActionPlans, icon: "📌", color: "#f59e0b" },
+          { label: "Campanhas", value: data.totals.totalCampaigns, icon: "📋", color: "#7a9aaa" },
+          { label: "Escopo", value: data.viewer.role === "OWNER" ? "Global" : "Vinculado", icon: "🔐", color: "#8b5cf6" },
+        ].map((item) => (
+          <div key={item.label} className="card-3d-sm p-5">
+            <div className="mb-2 text-2xl">{item.icon}</div>
+            <div className="text-2xl font-bold" style={{ color: item.color }}>{item.value}</div>
+            <div className="mt-1 text-xs" style={{ color: "#7a9aaa" }}>{item.label}</div>
           </div>
-          <div className="flex items-center gap-2">
-            <Link href="/" className="btn-ghost text-xs px-3 py-2">← Home</Link>
-          </div>
-        </div>
-      </header>
+        ))}
+      </div>
 
-      <div className="max-w-5xl mx-auto px-6 pt-8">
-        {/* Summary bar */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
-          {[
-            { icon: "🏢", value: companies.length, label: "Empresas" },
-            { icon: "📋", value: companies.reduce((a, c) => a + c.campaigns.length, 0), label: "Campanhas" },
-            { icon: "👥", value: companies.reduce((a, c) => a + c.totalUsers, 0), label: "Funcionários" },
-            { icon: "✅", value: companies.reduce((a, c) => a + c.campaigns.filter(x => x.status === "ACTIVE").length, 0), label: "Campanhas Ativas" },
-          ].map((s) => (
-            <div key={s.label} className="card-3d-sm p-5 text-center fade-up">
-              <div className="text-2xl mb-1">{s.icon}</div>
-              <div className="text-2xl font-bold" style={{ color: "#1e5f7a" }}>{s.value}</div>
-              <div className="text-xs font-medium mt-0.5" style={{ color: "#7a9aaa" }}>{s.label}</div>
+      <div className="mb-8 grid gap-6 xl:grid-cols-[1.3fr_0.7fr]">
+        <div className="card-3d-sm p-6">
+          <div className="mb-4 flex items-center justify-between gap-4">
+            <div>
+              <h2 className="text-sm font-semibold" style={{ color: "#1e3a4a" }}>Carteira de clientes</h2>
+              <p className="mt-1 text-xs" style={{ color: "#7a9aaa" }}>
+                Busca rápida e acesso aos painéis de cada tenant.
+              </p>
             </div>
-          ))}
-        </div>
-
-        {/* Health overview */}
-        <div className="card-3d-sm p-5 mb-8 fade-up">
-          <div className="flex items-center gap-2 mb-4">
-            <span className="text-lg">🩺</span>
-            <h2 className="text-sm font-semibold" style={{ color: "#1e3a4a" }}>Visão Geral de Saúde</h2>
+            <input
+              type="text"
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="Buscar empresa..."
+              className="w-full max-w-[240px] rounded-xl border px-4 py-2 text-sm outline-none"
+              style={{ borderColor: "rgba(91,158,201,0.25)", background: "white", color: "#1e3a4a" }}
+            />
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            {[
-              {
-                label: "Com campanha ativa",
-                value: companies.filter((c) => c.campaigns.some((x) => x.status === "ACTIVE")).length,
-                total: companies.length,
-                color: "#5baa6d",
-                bg: "rgba(91,170,109,0.08)",
-              },
-              {
-                label: "Sem campanha",
-                value: companies.filter((c) => c.campaigns.length === 0).length,
-                total: companies.length,
-                color: "#9ca3af",
-                bg: "rgba(107,114,128,0.08)",
-              },
-              {
-                label: "Campanhas encerradas",
-                value: companies.reduce((a, c) => a + c.campaigns.filter(x => x.status === "CLOSED").length, 0),
-                total: companies.reduce((a, c) => a + c.campaigns.length, 0),
-                color: "#f59e0b",
-                bg: "rgba(245,158,11,0.08)",
-              },
-              {
-                label: "Total de funcionários",
-                value: companies.reduce((a, c) => a + c.totalUsers, 0),
-                total: null,
-                color: "#2e7fa3",
-                bg: "rgba(46,127,163,0.08)",
-              },
-            ].map((item) => (
-              <div key={item.label} className="rounded-xl p-4" style={{ background: item.bg, border: `1px solid ${item.color}22` }}>
-                <div className="text-xl font-bold mb-0.5" style={{ color: item.color }}>{item.value}</div>
-                <div className="text-xs" style={{ color: "#7a9aaa" }}>
-                  {item.label}
-                  {item.total !== null && <span style={{ color: item.color }}> / {item.total}</span>}
+
+          <div className="space-y-3">
+            {filteredCompanies.map((company) => (
+              <div
+                key={company.id}
+                className="rounded-2xl border p-4"
+                style={{ borderColor: "rgba(91,158,201,0.12)", background: "rgba(91,158,201,0.04)" }}
+              >
+                <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-sm font-semibold" style={{ color: "#1e3a4a" }}>{company.name}</h3>
+                      {company.lastCampaign && (
+                        <span
+                          className="rounded-full px-2 py-0.5 text-[11px] font-semibold"
+                          style={{
+                            background: `${STATUS_COLOR[company.lastCampaign.status] ?? "#7a9aaa"}20`,
+                            color: STATUS_COLOR[company.lastCampaign.status] ?? "#7a9aaa",
+                          }}
+                        >
+                          {STATUS_LABEL[company.lastCampaign.status] ?? company.lastCampaign.status}
+                        </span>
+                      )}
+                    </div>
+                    <p className="mt-1 text-xs" style={{ color: "#7a9aaa" }}>
+                      {company.totalUsers} usuários · {company.totalResponses} respostas · {company.activeCampaigns} campanha(s) ativa(s)
+                    </p>
+                    {company.lastCampaign && (
+                      <p className="mt-2 text-xs" style={{ color: "#5a7a8a" }}>
+                        Última campanha: <strong>{company.lastCampaign.title}</strong> · /r/{company.lastCampaign.slug}
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="grid min-w-[220px] grid-cols-2 gap-2 text-xs">
+                    <div className="rounded-xl px-3 py-2" style={{ background: "rgba(220,38,38,0.06)", color: "#dc2626" }}>
+                      {company.unresolvedAlerts} alerta(s)
+                    </div>
+                    <div className="rounded-xl px-3 py-2" style={{ background: "rgba(245,158,11,0.08)", color: "#b45309" }}>
+                      {company.openActionPlans} plano(s)
+                    </div>
+                    <div className="rounded-xl px-3 py-2" style={{ background: "rgba(46,127,163,0.08)", color: "#1e5f7a" }}>
+                      {company.totalCampaigns} campanha(s)
+                    </div>
+                    <Link
+                      href={`/consultor/empresas/${company.id}${company.lastCampaign ? `?campaign=${company.lastCampaign.id}` : ""}`}
+                      className="rounded-xl px-3 py-2 text-center font-semibold"
+                      style={{ background: "linear-gradient(135deg,#2e7fa3,#1e5f7a)", color: "white" }}
+                    >
+                      Abrir tenant
+                    </Link>
+                  </div>
                 </div>
+
+                {canManageTenants && (
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <Link href={`/consultor/empresas/${company.id}/importar`} className="btn-ghost text-xs px-3 py-1.5">
+                      📤 Importar usuários
+                    </Link>
+                    <Link href={`/consultor/empresas/${company.id}/integracao`} className="btn-ghost text-xs px-3 py-1.5">
+                      🔗 Integração RH
+                    </Link>
+                    <Link href={`/consultor/empresas/${company.id}/auditoria`} className="btn-ghost text-xs px-3 py-1.5">
+                      📋 Auditoria
+                    </Link>
+                  </div>
+                )}
               </div>
             ))}
+
+            {filteredCompanies.length === 0 && (
+              <div className="rounded-2xl border border-dashed px-4 py-10 text-center text-sm" style={{ borderColor: "rgba(91,158,201,0.2)", color: "#7a9aaa" }}>
+                Nenhuma empresa encontrada.
+              </div>
+            )}
           </div>
         </div>
 
-        {/* Search */}
-        <div className="mb-6">
-          <input
-            type="text"
-            placeholder="Buscar empresa por nome ou CNPJ…"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full border rounded-xl px-4 py-3 text-sm outline-none"
-            style={{ borderColor: "rgba(91,158,201,0.25)", background: "white", color: "#1e3a4a" }}
-          />
-        </div>
-
-        {/* Company cards */}
-        <div className="space-y-4">
-          {filtered.length === 0 && (
-            <div className="card-3d p-12 text-center">
-              <div className="text-4xl mb-3">🏢</div>
-              <p style={{ color: "#7a9aaa" }}>Nenhuma empresa encontrada</p>
+        <div className="space-y-6">
+          <div className="card-3d-sm p-6">
+            <h2 className="text-sm font-semibold" style={{ color: "#1e3a4a" }}>Prioridades operacionais</h2>
+            <div className="mt-4 space-y-3 text-sm">
+              <div className="rounded-2xl p-4" style={{ background: "rgba(220,38,38,0.05)", border: "1px solid rgba(220,38,38,0.12)" }}>
+                <p className="font-semibold" style={{ color: "#dc2626" }}>Alertas críticos pendentes</p>
+                <p className="mt-1 text-xs" style={{ color: "#7a9aaa" }}>
+                  {data.totals.unresolvedAlerts} alerta(s) ainda sem resolução no conjunto da carteira.
+                </p>
+              </div>
+              <div className="rounded-2xl p-4" style={{ background: "rgba(245,158,11,0.07)", border: "1px solid rgba(245,158,11,0.14)" }}>
+                <p className="font-semibold" style={{ color: "#b45309" }}>Planos de ação em aberto</p>
+                <p className="mt-1 text-xs" style={{ color: "#7a9aaa" }}>
+                  {data.totals.openActionPlans} plano(s) precisam de acompanhamento.
+                </p>
+              </div>
+              <div className="rounded-2xl p-4" style={{ background: "rgba(91,170,109,0.08)", border: "1px solid rgba(91,170,109,0.16)" }}>
+                <p className="font-semibold" style={{ color: "#3d8a50" }}>Campanhas ativas</p>
+                <p className="mt-1 text-xs" style={{ color: "#7a9aaa" }}>
+                  {data.totals.activeCampaigns} campanha(s) em execução no momento.
+                </p>
+              </div>
             </div>
-          )}
+          </div>
 
-          {filtered.map((company) => (
-            <div key={company.id} className="card-3d-sm overflow-hidden fade-up">
-              {/* Company header */}
-              <button
-                className="w-full px-6 py-4 flex items-center justify-between text-left transition-colors hover:bg-blue-50/30"
-                onClick={() => setExpanded(expanded === company.id ? null : company.id)}
-              >
-                <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 rounded-xl flex items-center justify-center text-lg font-bold"
-                    style={{ background: "rgba(46,127,163,0.12)", color: "#2e7fa3" }}>
-                    {company.name[0].toUpperCase()}
-                  </div>
-                  <div>
-                    <div className="font-semibold text-sm" style={{ color: "#1e3a4a" }}>
-                      {company.name}
-                    </div>
-                    <div className="text-xs mt-0.5" style={{ color: "#7a9aaa" }}>
-                      {company.cnpj ?? "CNPJ não informado"} · {company.totalUsers} funcionários
-                    </div>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3">
-                  <span className="text-xs font-medium px-2.5 py-1 rounded-full"
-                    style={{ background: "rgba(91,170,109,0.1)", color: "#3d8a50" }}>
-                    {company.campaigns.filter((c) => c.status === "ACTIVE").length} ativa(s)
-                  </span>
-                  <span style={{ color: "#7a9aaa", fontSize: 16 }}>
-                    {expanded === company.id ? "▲" : "▼"}
-                  </span>
-                </div>
-              </button>
-
-              {/* Expanded campaigns */}
-              {expanded === company.id && (
-                <div className="border-t px-6 py-4" style={{ borderColor: "rgba(91,158,201,0.1)" }}>
-                  <div className="flex items-center justify-between mb-3">
-                    <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "#7a9aaa" }}>
-                      Campanhas
-                    </p>
-                    <div className="flex gap-2">
-                      <Link
-                        href={`/consultor/empresas/${company.id}/importar`}
-                        className="btn-ghost text-xs px-3 py-1.5"
-                      >
-                        📤 Importar CSV
-                      </Link>
-                      <Link
-                        href={`/consultor/empresas/${company.id}`}
-                        className="btn-primary text-xs px-3 py-1.5"
-                      >
-                        Ver painel →
-                      </Link>
-                    </div>
-                  </div>
-
-                  {company.campaigns.length === 0 ? (
-                    <p className="text-xs py-3" style={{ color: "#aac0cc" }}>
-                      Nenhuma campanha criada
-                    </p>
-                  ) : (
-                    <div className="space-y-2">
-                      {company.campaigns.map((c) => (
-                        <div key={c.id}
-                          className="flex items-center justify-between rounded-xl px-4 py-3"
-                          style={{ background: "rgba(91,158,201,0.05)", border: "1px solid rgba(91,158,201,0.12)" }}>
-                          <div>
-                            <span className="text-sm font-medium" style={{ color: "#1e3a4a" }}>
-                              {c.title}
-                            </span>
-                            <span className="text-xs ml-2" style={{ color: "#7a9aaa" }}>
-                              /r/{c.slug}
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs font-semibold px-2 py-0.5 rounded-full"
-                              style={{
-                                background: `${STATUS_COLOR[c.status]}20`,
-                                color: STATUS_COLOR[c.status],
-                              }}>
-                              {STATUS_LABEL[c.status]}
-                            </span>
-                            <Link
-                              href={`/consultor/empresas/${company.id}?campaign=${c.id}`}
-                              className="text-xs font-medium"
-                              style={{ color: "#2e7fa3" }}
-                            >
-                              Dashboard →
-                            </Link>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
+          <div className="card-3d-sm p-6">
+            <h2 className="text-sm font-semibold" style={{ color: "#1e3a4a" }}>Escopo de acesso</h2>
+            <div className="mt-4 space-y-3 text-xs" style={{ color: "#5a7a8a" }}>
+              <p><strong>OWNER</strong>: visão global de todos os tenants e ações de gestão.</p>
+              <p><strong>CONSULTANT</strong>: visão dos tenants vinculados e operação do dia a dia.</p>
+              <p><strong>ANALYST</strong>: leitura analítica sem mutações em tenants.</p>
             </div>
-          ))}
+          </div>
         </div>
       </div>
-    </main>
+    </SidebarShell>
   );
 }

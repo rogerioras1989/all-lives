@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getTenantContext, tenantError } from "@/lib/tenant";
+import { getTenantContext, requireTenantAnalytics, requireTenantManagement, tenantError } from "@/lib/tenant";
 
 export async function GET(req: NextRequest) {
   try {
     const ctx = await getTenantContext(req);
+    requireTenantAnalytics(ctx);
     const alerts = await prisma.sectorAlert.findMany({
       where: { companyId: ctx.companyId, isRead: false },
       orderBy: { createdAt: "desc" },
@@ -20,6 +21,7 @@ export async function GET(req: NextRequest) {
 export async function PATCH(req: NextRequest) {
   try {
     const ctx = await getTenantContext(req);
+    requireTenantManagement(ctx);
     const { alertId } = await req.json();
     await prisma.sectorAlert.updateMany({
       where: { id: alertId, companyId: ctx.companyId },

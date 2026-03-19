@@ -38,6 +38,7 @@ async function main() {
       name: "Consultor All Lives",
       email: "consultor@alllives.com.br",
       password: consultantPwHash,
+      globalRole: "OWNER",
     },
   });
   await prisma.consultantCompany.upsert({
@@ -54,7 +55,7 @@ async function main() {
   // User ADMIN demo — upsert por id para evitar conflito ao trocar hash
   const adminCpfHash = hashCpf("00000000000");
   const adminPinHash = await bcrypt.hash("123456", 12);
-  const admin = await prisma.user.upsert({
+  await prisma.user.upsert({
     where: { id: "user-admin-demo" },
     update: { cpfHash: adminCpfHash, pin: adminPinHash },
     create: {

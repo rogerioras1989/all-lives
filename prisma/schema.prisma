@@ -32,6 +32,7 @@ model Consultant {
   name             String
   email            String   @unique
   password         String
+  globalRole       ConsultantGlobalRole @default(CONSULTANT)
   totpSecret       String?
   totpEnabled      Boolean  @default(false)
   refreshTokenHash String?
@@ -42,6 +43,12 @@ model Consultant {
   updatedAt        DateTime @updatedAt
 
   companies ConsultantCompany[]
+}
+
+enum ConsultantGlobalRole {
+  OWNER
+  CONSULTANT
+  ANALYST
 }
 
 model ConsultantCompany {
