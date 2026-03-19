@@ -12,6 +12,13 @@ type TenantCompany = {
   totalCampaigns: number;
   totalAlerts: number;
   totalActionPlans: number;
+  campaigns?: {
+    id: string;
+    title: string;
+    status: string;
+    slug: string;
+    createdAt: string;
+  }[];
 };
 
 type CompaniesPayload = {
@@ -52,6 +59,7 @@ export function useConsultorTenantData(tenantId: string) {
     viewerRole,
     viewerRoleLabel: ROLE_LABEL[viewerRole] ?? viewerRole,
     readOnly: viewerRole === "ANALYST",
+    defaultCampaignId: company?.campaigns?.[0]?.id ?? null,
   };
 }
 

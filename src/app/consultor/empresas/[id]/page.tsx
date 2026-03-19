@@ -72,7 +72,8 @@ export default function EmpresaDashboardPage() {
   const { id } = useParams<{ id: string }>();
   const searchParams = useSearchParams();
   const router = useRouter();
-  const campaignId = searchParams.get("campaign") ?? "campaign-demo";
+  const tenantData = useConsultorTenantData(id);
+  const campaignId = searchParams.get("campaign") ?? tenantData.defaultCampaignId;
 
   const [snapshots, setSnapshots] = useState<Snapshot[]>([]);
   const [snapshotLoading, setSnapshotLoading] = useState(true);
@@ -85,10 +86,20 @@ export default function EmpresaDashboardPage() {
   const [showPlanForm, setShowPlanForm] = useState(false);
   const [planForm, setPlanForm] = useState({ title: "", description: "", sector: "", assignedTo: "", dueDate: "" });
   const [savingPlan, setSavingPlan] = useState(false);
-  const tenantData = useConsultorTenantData(id);
   const { readOnly } = tenantData;
 
   useEffect(() => {
+    if (!campaignId) {
+      setSnapshots([]);
+      setComments([]);
+      setSuppressedTopics(0);
+      setMinimumGroupSize(3);
+      setSlaAlerts([]);
+      setActionPlans([]);
+      setSnapshotLoading(false);
+      return;
+    }
+
     fetch(`/api/campaigns/${campaignId}/snapshot`)
       .then((r) => r.json())
       .then((d) => { setSnapshots(d.snapshots ?? []); setSnapshotLoading(false); })
@@ -193,6 +204,27 @@ export default function EmpresaDashboardPage() {
     key: `T${t.topicId}`,
     name: t.topicName,
   })) ?? [];
+
+  if (!campaignId) {
+    return (
+      <ConsultorTenantShell
+        tenantId={id}
+        company={tenantData.company}
+        viewerRoleLabel={tenantData.viewerRoleLabel}
+        readOnly={tenantData.readOnly}
+      >
+        <div className="mx-auto max-w-5xl">
+          <div className="card-3d-sm p-6 fade-up">
+            <h2 className="text-sm font-semibold" style={{ color: "#1e3a4a" }}>Tenant sem campanha</h2>
+            <p className="mt-2 text-sm leading-relaxed" style={{ color: "#5a7a8a" }}>
+              Esta empresa ainda não possui campanha cadastrada. No cadastro do tenant você pode criar uma campanha
+              inicial em rascunho para liberar a operação imediatamente.
+            </p>
+          </div>
+        </div>
+      </ConsultorTenantShell>
+    );
+  }
 
   return (
     <ConsultorTenantShell

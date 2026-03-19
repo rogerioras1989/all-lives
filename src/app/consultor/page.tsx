@@ -65,6 +65,16 @@ export default function ConsultorPage() {
   const [data, setData] = useState<OverviewData | null>(null);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [creatingCompany, setCreatingCompany] = useState(false);
+  const [createError, setCreateError] = useState("");
+  const [createForm, setCreateForm] = useState({
+    name: "",
+    cnpj: "",
+    slug: "",
+    createInitialCampaign: true,
+    campaignTitle: "",
+  });
 
   useEffect(() => {
     fetch("/api/consultor/overview")
@@ -89,6 +99,56 @@ export default function ConsultorPage() {
       ),
     [data?.companies, search]
   );
+
+  async function refreshOverview() {
+    const response = await fetch("/api/consultor/overview");
+    if (response.status === 401 || response.status === 403) {
+      router.push("/consultor/login");
+      return;
+    }
+    const payload = await response.json();
+    setData(payload);
+  }
+
+  async function createCompany() {
+    if (!createForm.name.trim()) {
+      setCreateError("Informe o nome da empresa.");
+      return;
+    }
+
+    setCreatingCompany(true);
+    setCreateError("");
+
+    try {
+      const response = await fetch("/api/consultor/companies", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(createForm),
+      });
+      const payload = await response.json();
+
+      if (!response.ok) {
+        setCreateError(payload.error ?? "Não foi possível cadastrar a empresa.");
+        return;
+      }
+
+      await refreshOverview();
+      setShowCreateForm(false);
+      setCreateForm({
+        name: "",
+        cnpj: "",
+        slug: "",
+        createInitialCampaign: true,
+        campaignTitle: "",
+      });
+
+      router.push(
+        `/consultor/empresas/${payload.company.id}${payload.campaign ? `?campaign=${payload.campaign.id}` : ""}`
+      );
+    } finally {
+      setCreatingCompany(false);
+    }
+  }
 
   if (loading) {
     return (
@@ -120,6 +180,110 @@ export default function ConsultorPage() {
       ]}
       actions={<Link href="/" className="btn-ghost text-xs px-3 py-2">← Home</Link>}
     >
+      {canManageTenants && (
+        <div className="card-3d-sm p-6 mb-8">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+            <div>
+              <h2 className="text-sm font-semibold" style={{ color: "#1e3a4a" }}>Cadastrar novo tenant</h2>
+              <p className="mt-1 text-xs" style={{ color: "#7a9aaa" }}>
+                Crie uma nova empresa cliente, vincule ao consultor atual e, se quiser, já gere a campanha inicial.
+              </p>
+            </div>
+            <button
+              type="button"
+              className="btn-primary text-xs px-4 py-2"
+              onClick={() => setShowCreateForm((current) => !current)}
+            >
+              {showCreateForm ? "Fechar cadastro" : "Nova empresa"}
+            </button>
+          </div>
+
+          {showCreateForm && (
+            <div className="mt-5 grid gap-4 lg:grid-cols-2">
+              <label className="text-xs font-medium" style={{ color: "#5a7a8a" }}>
+                Nome da empresa
+                <input
+                  type="text"
+                  value={createForm.name}
+                  onChange={(event) => setCreateForm((current) => ({ ...current, name: event.target.value }))}
+                  className="mt-1 w-full rounded-xl border px-4 py-2 text-sm outline-none"
+                  style={{ borderColor: "rgba(91,158,201,0.25)", background: "white", color: "#1e3a4a" }}
+                  placeholder="Ex.: Clínica Horizonte"
+                />
+              </label>
+              <label className="text-xs font-medium" style={{ color: "#5a7a8a" }}>
+                CNPJ
+                <input
+                  type="text"
+                  value={createForm.cnpj}
+                  onChange={(event) => setCreateForm((current) => ({ ...current, cnpj: event.target.value }))}
+                  className="mt-1 w-full rounded-xl border px-4 py-2 text-sm outline-none"
+                  style={{ borderColor: "rgba(91,158,201,0.25)", background: "white", color: "#1e3a4a" }}
+                  placeholder="Opcional"
+                />
+              </label>
+              <label className="text-xs font-medium" style={{ color: "#5a7a8a" }}>
+                Slug
+                <input
+                  type="text"
+                  value={createForm.slug}
+                  onChange={(event) => setCreateForm((current) => ({ ...current, slug: event.target.value }))}
+                  className="mt-1 w-full rounded-xl border px-4 py-2 text-sm outline-none"
+                  style={{ borderColor: "rgba(91,158,201,0.25)", background: "white", color: "#1e3a4a" }}
+                  placeholder="Opcional. Ex.: clinica-horizonte"
+                />
+              </label>
+              <label className="text-xs font-medium" style={{ color: "#5a7a8a" }}>
+                Título da campanha inicial
+                <input
+                  type="text"
+                  value={createForm.campaignTitle}
+                  onChange={(event) => setCreateForm((current) => ({ ...current, campaignTitle: event.target.value }))}
+                  className="mt-1 w-full rounded-xl border px-4 py-2 text-sm outline-none"
+                  style={{ borderColor: "rgba(91,158,201,0.25)", background: "white", color: "#1e3a4a" }}
+                  placeholder="Opcional"
+                  disabled={!createForm.createInitialCampaign}
+                />
+              </label>
+              <label className="flex items-center gap-3 rounded-2xl border px-4 py-3 text-sm lg:col-span-2"
+                style={{ borderColor: "rgba(91,158,201,0.18)", background: "rgba(91,158,201,0.04)", color: "#1e3a4a" }}>
+                <input
+                  type="checkbox"
+                  checked={createForm.createInitialCampaign}
+                  onChange={(event) => setCreateForm((current) => ({ ...current, createInitialCampaign: event.target.checked }))}
+                />
+                Criar campanha inicial em rascunho
+              </label>
+
+              {createError && (
+                <div className="rounded-2xl px-4 py-3 text-xs lg:col-span-2"
+                  style={{ background: "rgba(220,38,38,0.08)", color: "#b91c1c", border: "1px solid rgba(220,38,38,0.12)" }}>
+                  {createError}
+                </div>
+              )}
+
+              <div className="flex gap-3 lg:col-span-2">
+                <button
+                  type="button"
+                  className="btn-primary text-xs px-4 py-2"
+                  onClick={createCompany}
+                  disabled={creatingCompany}
+                >
+                  {creatingCompany ? "Cadastrando..." : "Salvar empresa"}
+                </button>
+                <button
+                  type="button"
+                  className="btn-ghost text-xs px-4 py-2"
+                  onClick={() => setShowCreateForm(false)}
+                >
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
       <div className="mb-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {[
           { label: "Empresas", value: data.totals.companies, icon: "🏢", color: "#2e7fa3" },
