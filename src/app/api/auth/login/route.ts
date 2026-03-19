@@ -6,9 +6,15 @@ import {
   signAccessToken, signRefreshToken,
   hashRefreshToken,
 } from "@/lib/auth";
+import {
+  consumeAuthRateLimit,
+  resetAuthRateLimit,
+} from "@/lib/auth-rate-limit";
 
 const MAX_ATTEMPTS = 5;
 const LOCK_MINUTES = 15;
+const AUTH_RATE_LIMIT_MAX = 20;
+const AUTH_RATE_LIMIT_WINDOW_MS = 60_000;
 
 // fix #9 — hash dummy constante para uso quando usuário não existe (evita timing attack)
 // Pré-gerado com bcrypt cost 12; nunca corresponde a nenhum PIN real
@@ -25,6 +31,24 @@ export async function POST(req: NextRequest) {
 
     if (!cpf || !pin) {
       return NextResponse.json({ error: "CPF e PIN obrigatórios" }, { status: 400 });
+    }
+
+    const rateLimit = await consumeAuthRateLimit({
+      req,
+      scope: "user_login",
+      subject: String(cpf),
+      maxAttempts: AUTH_RATE_LIMIT_MAX,
+      windowMs: AUTH_RATE_LIMIT_WINDOW_MS,
+      blockMs: LOCK_MINUTES * 60 * 1000,
+    });
+    if (!rateLimit.allowed) {
+      return NextResponse.json(
+        { error: `Muitas tentativas. Tente novamente em ${Math.ceil(rateLimit.retryAfterSeconds / 60)} min.` },
+        {
+          status: 429,
+          headers: { "Retry-After": String(rateLimit.retryAfterSeconds) },
+        }
+      );
     }
 
     const cpfHash = hashCpf(cpf);
@@ -105,6 +129,7 @@ export async function POST(req: NextRequest) {
         refreshTokenHash: refreshHash,
       },
     });
+    await resetAuthRateLimit(req, "user_login", String(cpf));
 
     const secure = isSecure(req); // fix #14
 

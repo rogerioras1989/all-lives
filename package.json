@@ -9,7 +9,8 @@
     "lint": "eslint",
     "db:migrate": "prisma migrate dev",
     "db:seed": "ts-node prisma/seed.ts",
-    "db:studio": "prisma studio"
+    "db:studio": "prisma studio",
+    "security:migrate-hr-keys": "tsx scripts/hash-legacy-hr-keys.ts"
   },
   "prisma": {
     "seed": "ts-node prisma/seed.ts"

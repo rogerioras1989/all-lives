@@ -376,12 +376,28 @@ model AuditLog {
   @@index([companyId, createdAt])
 }
 
+// ── RATE LIMIT DE AUTENTICAÇÃO ────────────────────────────────────────────────
+model AuthRateLimit {
+  id              String   @id @default(cuid())
+  scope           String
+  bucketKey       String
+  attempts        Int      @default(0)
+  windowStartedAt DateTime
+  blockedUntil    DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([scope, bucketKey])
+  @@index([blockedUntil])
+  @@index([updatedAt])
+}
+
 // ── INTEGRAÇÃO RH ─────────────────────────────────────────────────────────────
 model HrIntegration {
   id         String    @id @default(cuid())
   company    Company   @relation(fields: [companyId], references: [id])
   companyId  String    @unique
-  apiKey     String    @unique @default(cuid())
+  apiKey     String    @unique
   lastSyncAt DateTime?
   syncLog    Json?
   createdAt  DateTime  @default(now())

@@ -1,8 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
-import { createHash, randomInt } from "crypto";
+import { randomInt } from "crypto";
 import { hashCpf } from "@/lib/auth";
+import {
+  hashIntegrationKey,
+  isHashedIntegrationKey,
+} from "@/lib/integration-keys";
 
 type EmployeePayload = {
   name: string;
@@ -13,10 +17,6 @@ type EmployeePayload = {
 };
 
 const MAX_EMPLOYEES_PER_SYNC = 1000;
-
-function hashIntegrationKey(rawKey: string) {
-  return createHash("sha256").update(rawKey).digest("hex");
-}
 
 export async function POST(
   req: NextRequest,
@@ -29,7 +29,12 @@ export async function POST(
     if (!apiKey) return NextResponse.json({ error: "API key obrigatória" }, { status: 401 });
 
     const integration = await prisma.hrIntegration.findUnique({ where: { companyId } });
-    if (!integration || (integration.apiKey !== hashIntegrationKey(apiKey) && integration.apiKey !== apiKey)) {
+    const providedHash = hashIntegrationKey(apiKey);
+    const matchesStoredKey = isHashedIntegrationKey(integration?.apiKey ?? "")
+      ? integration?.apiKey === providedHash
+      : integration?.apiKey === apiKey;
+
+    if (!integration || !matchesStoredKey) {
       return NextResponse.json({ error: "API key inválida" }, { status: 401 });
     }
 

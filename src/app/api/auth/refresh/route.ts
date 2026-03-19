@@ -4,6 +4,14 @@ import {
   verifyRefreshToken, verifyRefreshTokenHash,
   signAccessToken, signRefreshToken, hashRefreshToken,
 } from "@/lib/auth";
+import {
+  consumeAuthRateLimit,
+  resetAuthRateLimit,
+} from "@/lib/auth-rate-limit";
+
+const REFRESH_RATE_LIMIT_MAX = 20;
+const REFRESH_RATE_LIMIT_WINDOW_MS = 60_000;
+const REFRESH_RATE_LIMIT_BLOCK_MS = 5 * 60 * 1000;
 
 function isSecure(req: NextRequest): boolean {
   return req.headers.get("x-forwarded-proto") === "https" ||
@@ -12,6 +20,23 @@ function isSecure(req: NextRequest): boolean {
 
 export async function POST(req: NextRequest) {
   try {
+    const rateLimit = await consumeAuthRateLimit({
+      req,
+      scope: "token_refresh",
+      maxAttempts: REFRESH_RATE_LIMIT_MAX,
+      windowMs: REFRESH_RATE_LIMIT_WINDOW_MS,
+      blockMs: REFRESH_RATE_LIMIT_BLOCK_MS,
+    });
+    if (!rateLimit.allowed) {
+      return NextResponse.json(
+        { error: "Muitas tentativas de refresh. Tente novamente em alguns minutos." },
+        {
+          status: 429,
+          headers: { "Retry-After": String(rateLimit.retryAfterSeconds) },
+        }
+      );
+    }
+
     const token = req.cookies.get("refresh_token")?.value;
     if (!token) return NextResponse.json({ error: "No token" }, { status: 401 });
 
@@ -41,6 +66,7 @@ export async function POST(req: NextRequest) {
       res.cookies.set("refresh_token", newRefresh, {
         httpOnly: true, secure, sameSite: "lax", maxAge: 7 * 24 * 60 * 60, path: "/api/auth/refresh",
       });
+      await resetAuthRateLimit(req, "token_refresh");
       return res;
     }
 
@@ -68,6 +94,7 @@ export async function POST(req: NextRequest) {
     res.cookies.set("refresh_token", newRefresh, {
       httpOnly: true, secure, sameSite: "lax", maxAge: 7 * 24 * 60 * 60, path: "/api/auth/refresh",
     });
+    await resetAuthRateLimit(req, "token_refresh");
     return res;
   } catch {
     return NextResponse.json({ error: "Invalid token" }, { status: 401 });

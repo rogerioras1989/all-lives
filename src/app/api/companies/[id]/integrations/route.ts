@@ -1,16 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { createHash, randomUUID } from "crypto";
+import { randomUUID } from "crypto";
 import {
   getTenantContext,
   requireTenantCompanyMatch,
   requireTenantManagement,
   tenantError,
 } from "@/lib/tenant";
-
-function hashIntegrationKey(rawKey: string) {
-  return createHash("sha256").update(rawKey).digest("hex");
-}
+import { hashIntegrationKey } from "@/lib/integration-keys";
 
 export async function GET(
   req: NextRequest,
