@@ -3,8 +3,9 @@ import { prisma } from "@/lib/prisma";
 
 export async function POST(
   req: NextRequest,
-  { params }: { params: { protocol: string } }
+  { params }: { params: Promise<{ protocol: string }> }
 ) {
+  const { protocol } = await params;
   try {
     const { text, sender } = await req.json();
 
@@ -13,7 +14,7 @@ export async function POST(
     }
 
     const report = await prisma.whistleblowerReport.findUnique({
-      where: { protocol: params.protocol }
+      where: { protocol }
     });
 
     if (!report) {

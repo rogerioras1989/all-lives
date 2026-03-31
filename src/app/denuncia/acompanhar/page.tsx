@@ -1,12 +1,12 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 
 const LOGO = "https://all-livesocupacional.com.br/wp-content/uploads/2025/01/AllLivesPreferencial-copiar.png.webp";
 
-export default function FollowUpPage() {
+function FollowUpContent() {
   const searchParams = useSearchParams();
   const [protocolInput, setProtocolInput] = useState(searchParams.get("protocol") || "");
   const [report, setReport] = useState<any>(null);
@@ -166,5 +166,13 @@ export default function FollowUpPage() {
         )}
       </div>
     </main>
+  );
+}
+
+export default function FollowUpPage() {
+  return (
+    <Suspense>
+      <FollowUpContent />
+    </Suspense>
   );
 }
