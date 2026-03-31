@@ -11,7 +11,7 @@ export const SECTORS = [
   "Administrativo",
   "Recursos Humanos",
   "Comercial",
-  "Outro",
+  "ETC",
 ];
 
 export interface Question {

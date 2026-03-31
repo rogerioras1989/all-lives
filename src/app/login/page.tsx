@@ -1,267 +1,124 @@
 "use client";
-import { useState, useRef } from "react";
 import Image from "next/image";
-import { useRouter } from "next/navigation";
-
-type Step = "cpf" | "pin" | "totp";
-
-function formatCpf(v: string) {
-  const d = v.replace(/\D/g, "").slice(0, 11);
-  return d
-    .replace(/(\d{3})(\d)/, "$1.$2")
-    .replace(/(\d{3})\.(\d{3})(\d)/, "$1.$2.$3")
-    .replace(/(\d{3})\.(\d{3})\.(\d{3})(\d)/, "$1.$2.$3-$4");
-}
+import Link from "next/link";
 
 export default function LoginPage() {
-  const router = useRouter();
-  const [step, setStep] = useState<Step>("cpf");
-  const [cpf, setCpf] = useState("");
-  const [pin, setPin] = useState(["", "", "", "", "", ""]);
-  const [totp, setTotp] = useState(["", "", "", "", "", ""]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-
-  const pinRefs = useRef<(HTMLInputElement | null)[]>([]);
-  const totpRefs = useRef<(HTMLInputElement | null)[]>([]);
-
-  function handleCpfSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    const digits = cpf.replace(/\D/g, "");
-    if (digits.length !== 11) { setError("CPF inválido"); return; }
-    setError("");
-    setStep("pin");
-    setTimeout(() => pinRefs.current[0]?.focus(), 100);
-  }
-
-  function handlePinChange(idx: number, val: string) {
-    if (!/^\d?$/.test(val)) return;
-    const next = [...pin];
-    next[idx] = val;
-    setPin(next);
-    if (val && idx < 5) pinRefs.current[idx + 1]?.focus();
-  }
-
-  function handlePinKeyDown(idx: number, e: React.KeyboardEvent) {
-    if (e.key === "Backspace" && !pin[idx] && idx > 0) {
-      pinRefs.current[idx - 1]?.focus();
-    }
-  }
-
-  async function handlePinSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    const pinStr = pin.join("");
-    if (pinStr.length !== 6) { setError("PIN incompleto"); return; }
-    setError("");
-    setLoading(true);
-    try {
-      const res = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ cpf: cpf.replace(/\D/g, ""), pin: pinStr }),
-      });
-      const data = await res.json();
-      if (data.requireTotp) {
-        setStep("totp");
-        setTimeout(() => totpRefs.current[0]?.focus(), 100);
-      } else if (data.ok) {
-        router.push("/dashboard");
-      } else {
-        setError(data.error || "Erro ao entrar");
-      }
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  function handleTotpChange(idx: number, val: string) {
-    if (!/^\d?$/.test(val)) return;
-    const next = [...totp];
-    next[idx] = val;
-    setTotp(next);
-    if (val && idx < 5) totpRefs.current[idx + 1]?.focus();
-  }
-
-  function handleTotpKeyDown(idx: number, e: React.KeyboardEvent) {
-    if (e.key === "Backspace" && !totp[idx] && idx > 0) {
-      totpRefs.current[idx - 1]?.focus();
-    }
-  }
-
-  async function handleTotpSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    const totpStr = totp.join("");
-    if (totpStr.length !== 6) { setError("Código incompleto"); return; }
-    setError("");
-    setLoading(true);
-    try {
-      const res = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ cpf: cpf.replace(/\D/g, ""), pin: pin.join(""), totpToken: totpStr }),
-      });
-      const data = await res.json();
-      if (data.ok) {
-        router.push("/dashboard");
-      } else {
-        setError(data.error || "Código inválido");
-      }
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  const stepLabel = { cpf: "1 de 3", pin: "2 de 3", totp: "3 de 3" }[step];
-  const stepPct = { cpf: 33, pin: 66, totp: 100 }[step];
-
   return (
-    <main className="min-h-screen gradient-hero flex items-center justify-center px-4">
-      <div className="w-full max-w-sm">
+    <main className="min-h-screen gradient-hero flex flex-col items-center justify-center px-4 py-12">
+      <div className="max-w-md w-full fade-up">
         {/* Logo */}
-        <div className="flex justify-center mb-8">
+        <div className="flex justify-center mb-10">
           <Image
             src="https://all-livesocupacional.com.br/wp-content/uploads/2025/01/AllLivesPreferencial-copiar.png.webp"
             alt="All Lives"
-            width={140}
-            height={44}
+            width={160}
+            height={50}
             className="object-contain"
             unoptimized
           />
         </div>
 
-        <div className="card-3d p-8 fade-up">
-          {/* Progress */}
-          <div className="mb-6">
-            <div className="flex justify-between text-xs mb-2" style={{ color: "#7a9aaa" }}>
-              <span>Autenticação</span>
-              <span>{stepLabel}</span>
+        <div className="card-3d p-8 mb-4">
+          <h1 className="text-xl font-bold mb-1 text-center" style={{ color: "#1e3a4a" }}>
+            Como deseja acessar?
+          </h1>
+          <p className="text-sm text-center mb-8" style={{ color: "#7a9aaa" }}>
+            Selecione o seu perfil para continuar
+          </p>
+
+          <div className="space-y-3">
+            {/* Sou Colaborador */}
+            <Link href="/acesso/colaborador"
+              className="flex items-center gap-4 w-full p-4 rounded-2xl transition-all group"
+              style={{
+                border: "1.5px solid rgba(91,158,201,0.25)",
+                background: "rgba(91,158,201,0.04)",
+              }}
+              onMouseEnter={e => {
+                (e.currentTarget as HTMLElement).style.border = "1.5px solid #2e7fa3";
+                (e.currentTarget as HTMLElement).style.background = "rgba(46,127,163,0.08)";
+                (e.currentTarget as HTMLElement).style.boxShadow = "0 4px 16px rgba(46,127,163,0.12)";
+              }}
+              onMouseLeave={e => {
+                (e.currentTarget as HTMLElement).style.border = "1.5px solid rgba(91,158,201,0.25)";
+                (e.currentTarget as HTMLElement).style.background = "rgba(91,158,201,0.04)";
+                (e.currentTarget as HTMLElement).style.boxShadow = "none";
+              }}
+            >
+              <div className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0"
+                style={{ background: "linear-gradient(135deg,#2e7fa3,#1e5f7a)" }}>
+                <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
+              </div>
+              <div className="flex-1 text-left">
+                <div className="font-semibold text-sm" style={{ color: "#1e3a4a" }}>Sou Colaborador</div>
+                <div className="text-xs mt-0.5" style={{ color: "#7a9aaa" }}>Responder pesquisa da minha empresa</div>
+              </div>
+              <svg className="w-5 h-5 transition-transform group-hover:translate-x-1" style={{ color: "#5b9ec9" }}
+                fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+              </svg>
+            </Link>
+
+            {/* Sou Empresa */}
+            <div
+              className="flex items-center gap-4 w-full p-4 rounded-2xl cursor-not-allowed"
+              style={{
+                border: "1.5px solid #e8f0f5",
+                background: "#f8fbfd",
+                opacity: 0.6,
+              }}
+            >
+              <div className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0"
+                style={{ background: "#e2edf4" }}>
+                <svg className="w-6 h-6" style={{ color: "#7a9aaa" }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-2 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                </svg>
+              </div>
+              <div className="flex-1 text-left">
+                <div className="font-semibold text-sm" style={{ color: "#3a5a6a" }}>Sou Empresa</div>
+                <div className="text-xs mt-0.5" style={{ color: "#aac0cc" }}>Gestão de campanhas e resultados</div>
+              </div>
+              <span className="text-[10px] font-bold px-2 py-1 rounded-full"
+                style={{ background: "#e8f0f5", color: "#aac0cc" }}>
+                Em breve
+              </span>
             </div>
-            <div className="h-1.5 rounded-full" style={{ background: "rgba(91,158,201,0.15)" }}>
-              <div
-                className="h-full rounded-full transition-all duration-500"
-                style={{
-                  width: `${stepPct}%`,
-                  background: "linear-gradient(90deg, #2e7fa3, #5baa6d)",
-                }}
-              />
+
+            {/* Administração */}
+            <div
+              className="flex items-center gap-4 w-full p-4 rounded-2xl cursor-not-allowed"
+              style={{
+                border: "1.5px solid #e8f0f5",
+                background: "#f8fbfd",
+                opacity: 0.6,
+              }}
+            >
+              <div className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0"
+                style={{ background: "#e2edf4" }}>
+                <svg className="w-6 h-6" style={{ color: "#7a9aaa" }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                </svg>
+              </div>
+              <div className="flex-1 text-left">
+                <div className="font-semibold text-sm" style={{ color: "#3a5a6a" }}>Administração</div>
+                <div className="text-xs mt-0.5" style={{ color: "#aac0cc" }}>Acesso interno All Lives</div>
+              </div>
+              <span className="text-[10px] font-bold px-2 py-1 rounded-full"
+                style={{ background: "#e8f0f5", color: "#aac0cc" }}>
+                Em breve
+              </span>
             </div>
           </div>
-
-          {/* CPF Step */}
-          {step === "cpf" && (
-            <form onSubmit={handleCpfSubmit} className="slide-in-right">
-              <h2 className="text-xl font-bold mb-1" style={{ color: "#1e3a4a" }}>
-                Informe seu CPF
-              </h2>
-              <p className="text-xs mb-6" style={{ color: "#7a9aaa" }}>
-                Seu CPF é anonimizado — apenas um hash é armazenado
-              </p>
-              <input
-                type="text"
-                inputMode="numeric"
-                placeholder="000.000.000-00"
-                value={cpf}
-                onChange={(e) => setCpf(formatCpf(e.target.value))}
-                className="w-full border rounded-xl px-4 py-3 text-sm outline-none transition-all mb-4"
-                style={{
-                  borderColor: "rgba(91,158,201,0.3)",
-                  background: "#f8fbfd",
-                  color: "#1e3a4a",
-                }}
-                autoFocus
-              />
-              {error && <p className="text-xs mb-3" style={{ color: "#dc2626" }}>{error}</p>}
-              <button type="submit" className="btn-primary w-full">Continuar</button>
-            </form>
-          )}
-
-          {/* PIN Step */}
-          {step === "pin" && (
-            <form onSubmit={handlePinSubmit} className="slide-in-right">
-              <h2 className="text-xl font-bold mb-1" style={{ color: "#1e3a4a" }}>
-                Digite seu PIN
-              </h2>
-              <p className="text-xs mb-6" style={{ color: "#7a9aaa" }}>
-                PIN de 6 dígitos cadastrado previamente
-              </p>
-              <div className="flex gap-2 justify-center mb-6">
-                {pin.map((d, i) => (
-                  <input
-                    key={i}
-                    ref={(el) => { pinRefs.current[i] = el; }}
-                    type="password"
-                    inputMode="numeric"
-                    maxLength={1}
-                    value={d}
-                    onChange={(e) => handlePinChange(i, e.target.value)}
-                    onKeyDown={(e) => handlePinKeyDown(i, e)}
-                    className="w-11 h-14 text-center text-xl font-bold border-2 rounded-xl outline-none transition-all"
-                    style={{
-                      borderColor: d ? "#2e7fa3" : "rgba(91,158,201,0.25)",
-                      background: d ? "rgba(46,127,163,0.06)" : "#f8fbfd",
-                      color: "#1e3a4a",
-                    }}
-                  />
-                ))}
-              </div>
-              {error && <p className="text-xs mb-3 text-center" style={{ color: "#dc2626" }}>{error}</p>}
-              <button type="submit" className="btn-primary w-full" disabled={loading}>
-                {loading ? "Verificando…" : "Entrar"}
-              </button>
-              <button
-                type="button"
-                className="w-full mt-2 text-xs py-2"
-                style={{ color: "#7a9aaa" }}
-                onClick={() => { setStep("cpf"); setPin(["","","","","",""]); setError(""); }}
-              >
-                ← Voltar
-              </button>
-            </form>
-          )}
-
-          {/* TOTP Step */}
-          {step === "totp" && (
-            <form onSubmit={handleTotpSubmit} className="slide-in-right">
-              <div className="text-center mb-4">
-                <div className="text-3xl mb-2">📱</div>
-                <h2 className="text-xl font-bold mb-1" style={{ color: "#1e3a4a" }}>
-                  Verificação em 2 etapas
-                </h2>
-                <p className="text-xs" style={{ color: "#7a9aaa" }}>
-                  Abra seu app autenticador e informe o código de 6 dígitos
-                </p>
-              </div>
-              <div className="flex gap-2 justify-center mb-6 mt-6">
-                {totp.map((d, i) => (
-                  <input
-                    key={i}
-                    ref={(el) => { totpRefs.current[i] = el; }}
-                    type="text"
-                    inputMode="numeric"
-                    maxLength={1}
-                    value={d}
-                    onChange={(e) => handleTotpChange(i, e.target.value)}
-                    onKeyDown={(e) => handleTotpKeyDown(i, e)}
-                    className="w-11 h-14 text-center text-xl font-bold border-2 rounded-xl outline-none transition-all"
-                    style={{
-                      borderColor: d ? "#5baa6d" : "rgba(91,158,201,0.25)",
-                      background: d ? "rgba(91,170,109,0.06)" : "#f8fbfd",
-                      color: "#1e3a4a",
-                    }}
-                  />
-                ))}
-              </div>
-              {error && <p className="text-xs mb-3 text-center" style={{ color: "#dc2626" }}>{error}</p>}
-              <button type="submit" className="btn-green w-full" disabled={loading}>
-                {loading ? "Verificando…" : "Verificar"}
-              </button>
-            </form>
-          )}
         </div>
 
-        <p className="text-center text-xs mt-6" style={{ color: "#aac0cc" }}>
-          Acesso protegido · dados anonimizados · LGPD
-        </p>
+        <Link href="/" className="block text-center text-sm py-2 transition-colors"
+          style={{ color: "#aac0cc" }}
+          onMouseEnter={e => (e.currentTarget.style.color = "#2e7fa3")}
+          onMouseLeave={e => (e.currentTarget.style.color = "#aac0cc")}>
+          ← Voltar ao início
+        </Link>
       </div>
     </main>
   );
