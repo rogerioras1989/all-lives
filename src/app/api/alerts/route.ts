@@ -13,7 +13,16 @@ export async function GET(req: NextRequest) {
       orderBy: { createdAt: "desc" },
       take: 20,
     });
-    return NextResponse.json({ alerts });
+
+    const consultantLink = await prisma.consultantCompany.findFirst({
+      where: { companyId: ctx.companyId, schedulingUrl: { not: null } },
+      select: { schedulingUrl: true }
+    });
+
+    return NextResponse.json({ 
+      alerts, 
+      schedulingUrl: consultantLink?.schedulingUrl ?? null 
+    });
   } catch (err) {
     const { error, status } = tenantError(err);
     return NextResponse.json({ error }, { status });

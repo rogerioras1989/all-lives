@@ -18,7 +18,7 @@ export async function GET(
       where: { slug, status: { in: ["ACTIVE", "CLOSED"] } },
       select: {
         id: true, title: true, status: true, startDate: true, endDate: true,
-        company: { select: { name: true } },
+        company: { select: { name: true, helpUrl: true } },
       },
     });
 

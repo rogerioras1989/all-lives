@@ -133,9 +133,18 @@ export async function POST(req: NextRequest) {
 
     const secure = isSecure(req); // fix #14
 
+    // Mapeamento de rotas por Role
+    let redirectTo = "/dashboard";
+    if (user.role === "EMPLOYEE") {
+      redirectTo = "/portal";
+    } else if (user.role === "OWNER" || user.role === "ADMIN" || user.role === "HR") {
+      redirectTo = "/dashboard";
+    }
+
     const res = NextResponse.json({
       ok: true,
       user: { id: user.id, name: user.name, role: user.role, companyId: user.companyId },
+      redirectTo,
     });
 
     res.cookies.set("access_token", accessToken, {

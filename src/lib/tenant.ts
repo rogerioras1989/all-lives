@@ -10,8 +10,8 @@ export interface TenantContext {
   tenantRole?: string;
 }
 
-const COMPANY_ANALYTICS_ROLES = new Set(["SUPER_ADMIN", "ADMIN", "HR", "MANAGER"]);
-const COMPANY_MANAGEMENT_ROLES = new Set(["SUPER_ADMIN", "ADMIN", "HR"]);
+const COMPANY_ANALYTICS_ROLES = new Set(["OWNER", "ADMIN", "HR", "MANAGER"]);
+const COMPANY_MANAGEMENT_ROLES = new Set(["OWNER", "ADMIN", "HR"]);
 
 /**
  * Extracts the company context from the JWT.
