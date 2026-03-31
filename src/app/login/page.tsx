@@ -96,29 +96,38 @@ export default function LoginPage() {
             </Link>
 
             {/* Administração */}
-            <div
-              className="flex items-center gap-4 w-full p-4 rounded-2xl cursor-not-allowed"
+            <Link href="/acesso/admin"
+              className="flex items-center gap-4 w-full p-4 rounded-2xl transition-all group"
               style={{
-                border: "1.5px solid #e8f0f5",
-                background: "#f8fbfd",
-                opacity: 0.6,
+                border: "1.5px solid rgba(220,38,38,0.2)",
+                background: "rgba(220,38,38,0.03)",
+              }}
+              onMouseEnter={e => {
+                (e.currentTarget as HTMLElement).style.border = "1.5px solid #dc2626";
+                (e.currentTarget as HTMLElement).style.background = "rgba(220,38,38,0.07)";
+                (e.currentTarget as HTMLElement).style.boxShadow = "0 4px 16px rgba(220,38,38,0.1)";
+              }}
+              onMouseLeave={e => {
+                (e.currentTarget as HTMLElement).style.border = "1.5px solid rgba(220,38,38,0.2)";
+                (e.currentTarget as HTMLElement).style.background = "rgba(220,38,38,0.03)";
+                (e.currentTarget as HTMLElement).style.boxShadow = "none";
               }}
             >
               <div className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0"
-                style={{ background: "#e2edf4" }}>
-                <svg className="w-6 h-6" style={{ color: "#7a9aaa" }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                style={{ background: "linear-gradient(135deg,#dc2626,#b91c1c)" }}>
+                <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                 </svg>
               </div>
               <div className="flex-1 text-left">
-                <div className="font-semibold text-sm" style={{ color: "#3a5a6a" }}>Administração</div>
-                <div className="text-xs mt-0.5" style={{ color: "#aac0cc" }}>Acesso interno All Lives</div>
+                <div className="font-semibold text-sm" style={{ color: "#1e3a4a" }}>Administração</div>
+                <div className="text-xs mt-0.5" style={{ color: "#7a9aaa" }}>Acesso interno All Lives</div>
               </div>
-              <span className="text-[10px] font-bold px-2 py-1 rounded-full"
-                style={{ background: "#e8f0f5", color: "#aac0cc" }}>
-                Em breve
-              </span>
-            </div>
+              <svg className="w-5 h-5 transition-transform group-hover:translate-x-1" style={{ color: "#dc2626" }}
+                fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+              </svg>
+            </Link>
           </div>
         </div>
 
