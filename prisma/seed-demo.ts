@@ -8,7 +8,10 @@ const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL! });
 const prisma = new PrismaClient({ adapter });
 
 async function main() {
-  const adminPasswordHash = await bcrypt.hash("demo1234", 12);
+  const demoPassword = process.env.SEED_DEMO_PASSWORD ?? "demo1234";
+  const adminPassword = process.env.SEED_ADMIN_PASSWORD ?? "admin1234";
+
+  const adminPasswordHash = await bcrypt.hash(demoPassword, 12);
 
   // Cria a Empresa Demo (upsert para não duplicar)
   const company = await prisma.company.upsert({
@@ -44,7 +47,7 @@ async function main() {
   }
 
   // Cria o usuário admin (OWNER) para o painel de Administração
-  const adminHash = await bcrypt.hash("admin1234", 12);
+  const adminHash = await bcrypt.hash(adminPassword, 12);
   const admin = await prisma.consultant.upsert({
     where: { email: "admin@alllives.com.br" },
     update: { password: adminHash },
