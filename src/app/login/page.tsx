@@ -62,29 +62,38 @@ export default function LoginPage() {
             </Link>
 
             {/* Sou Empresa */}
-            <div
-              className="flex items-center gap-4 w-full p-4 rounded-2xl cursor-not-allowed"
+            <Link href="/acesso/empresa"
+              className="flex items-center gap-4 w-full p-4 rounded-2xl transition-all group"
               style={{
-                border: "1.5px solid #e8f0f5",
-                background: "#f8fbfd",
-                opacity: 0.6,
+                border: "1.5px solid rgba(91,170,109,0.25)",
+                background: "rgba(91,170,109,0.04)",
+              }}
+              onMouseEnter={e => {
+                (e.currentTarget as HTMLElement).style.border = "1.5px solid #5baa6d";
+                (e.currentTarget as HTMLElement).style.background = "rgba(91,170,109,0.08)";
+                (e.currentTarget as HTMLElement).style.boxShadow = "0 4px 16px rgba(91,170,109,0.12)";
+              }}
+              onMouseLeave={e => {
+                (e.currentTarget as HTMLElement).style.border = "1.5px solid rgba(91,170,109,0.25)";
+                (e.currentTarget as HTMLElement).style.background = "rgba(91,170,109,0.04)";
+                (e.currentTarget as HTMLElement).style.boxShadow = "none";
               }}
             >
               <div className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0"
-                style={{ background: "#e2edf4" }}>
-                <svg className="w-6 h-6" style={{ color: "#7a9aaa" }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                style={{ background: "linear-gradient(135deg,#5baa6d,#3d8a50)" }}>
+                <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-2 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
                 </svg>
               </div>
               <div className="flex-1 text-left">
-                <div className="font-semibold text-sm" style={{ color: "#3a5a6a" }}>Sou Empresa</div>
-                <div className="text-xs mt-0.5" style={{ color: "#aac0cc" }}>Gestão de campanhas e resultados</div>
+                <div className="font-semibold text-sm" style={{ color: "#1e3a4a" }}>Sou Empresa</div>
+                <div className="text-xs mt-0.5" style={{ color: "#7a9aaa" }}>Gestão de campanhas e resultados</div>
               </div>
-              <span className="text-[10px] font-bold px-2 py-1 rounded-full"
-                style={{ background: "#e8f0f5", color: "#aac0cc" }}>
-                Em breve
-              </span>
-            </div>
+              <svg className="w-5 h-5 transition-transform group-hover:translate-x-1" style={{ color: "#5baa6d" }}
+                fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+              </svg>
+            </Link>
 
             {/* Administração */}
             <div

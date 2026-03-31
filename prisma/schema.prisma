@@ -13,7 +13,10 @@ model Company {
   name      String
   cnpj      String?  @unique
   slug      String   @unique
-  logoUrl   String?
+  logoUrl           String?
+  segment           String?  // fix #4: segment for benchmarking
+  helpUrl           String?  // fix #11: help link for crisis button
+  adminPasswordHash String?  // acesso empresa sem usuário individual
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -24,6 +27,7 @@ model Company {
   actionPlans   ActionPlan[]
   auditLogs     AuditLog[]
   hrIntegration HrIntegration?
+  whistleblowerReports WhistleblowerReport[] // fix #10
 }
 
 // ── CONSULTOR (All Lives) ─────────────────────────────────────────────────────
@@ -52,15 +56,59 @@ enum ConsultantGlobalRole {
 }
 
 model ConsultantCompany {
-  id           String     @id @default(cuid())
-  consultant   Consultant @relation(fields: [consultantId], references: [id])
-  consultantId String
-  company      Company    @relation(fields: [companyId], references: [id])
-  companyId    String
-  role         String     @default("VIEWER")
-  createdAt    DateTime   @default(now())
+  id            String     @id @default(cuid())
+  consultant    Consultant @relation(fields: [consultantId], references: [id])
+  consultantId  String
+  company       Company    @relation(fields: [companyId], references: [id])
+  companyId     String
+  role          String     @default("VIEWER")
+  schedulingUrl String?    // fix #15: scheduling link
+  createdAt     DateTime   @default(now())
 
   @@unique([consultantId, companyId])
+}
+
+// ── CANAL DE DENÚNCIA ANÔNIMO (fix #10) ──────────────────────────────────────
+model WhistleblowerReport {
+  id          String              @id @default(cuid())
+  company     Company             @relation(fields: [companyId], references: [id])
+  companyId   String
+  topic       String
+  description String
+  status      WhistleblowerStatus @default(OPEN)
+  priority    ReportPriority      @default(MEDIUM)
+  protocol    String              @unique
+  ipHash      String?
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+
+  messages    WhistleblowerMessage[]
+
+  @@index([companyId])
+  @@index([protocol])
+}
+
+model WhistleblowerMessage {
+  id        String              @id @default(cuid())
+  report    WhistleblowerReport @relation(fields: [reportId], references: [id])
+  reportId  String
+  text      String
+  sender    String              // "ANONYMOUS" or consultant name/ID
+  createdAt DateTime            @default(now())
+}
+
+enum WhistleblowerStatus {
+  OPEN
+  INVESTIGATING
+  RESOLVED
+  REJECTED
+}
+
+enum ReportPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
 }
 
 // ── USUÁRIO ───────────────────────────────────────────────────────────────────
@@ -97,7 +145,7 @@ model User {
 }
 
 enum Role {
-  SUPER_ADMIN
+  OWNER
   ADMIN
   HR
   MANAGER

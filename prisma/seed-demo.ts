@@ -1,5 +1,6 @@
 import { PrismaClient } from "../src/generated/prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
+import bcrypt from "bcryptjs";
 import * as dotenv from "dotenv";
 dotenv.config();
 
@@ -7,13 +8,16 @@ const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL! });
 const prisma = new PrismaClient({ adapter });
 
 async function main() {
+  const adminPasswordHash = await bcrypt.hash("demo1234", 12);
+
   // Cria a Empresa Demo (upsert para não duplicar)
   const company = await prisma.company.upsert({
     where: { slug: "empresa-demo" },
-    update: {},
+    update: { adminPasswordHash },
     create: {
       name: "Empresa Demo",
       slug: "empresa-demo",
+      adminPasswordHash,
     },
   });
 
