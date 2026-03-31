@@ -173,9 +173,12 @@ const TESTIMONIALS = [
   { name: "Ana Paula M.", role: "SESMT", company: "Construtora Regional", text: "O anonimato garantido fez toda a diferença. Nossa taxa de adesão foi de 91% na primeira campanha — algo que nunca conseguimos antes.", avatar: "AP", color: "#8b5cf6" },
 ];
 const SECURITY = [
-  { icon: "🔐", label: "Criptografia AES-256" }, { icon: "👤", label: "CPF Anonimizado" },
-  { icon: "🛡️", label: "Conformidade LGPD" }, { icon: "🔒", label: "JWT + 2FA" },
-  { icon: "📵", label: "Zero PII nos dados" }, { icon: "✅", label: "Auditoria NR-01" },
+  { icon: "🔐", label: "Dados protegidos com criptografia avançada" },
+  { icon: "👤", label: "Identidade dos colaboradores preservada" },
+  { icon: "🛡️", label: "Em conformidade com a LGPD" },
+  { icon: "🔒", label: "Acesso seguro com login protegido" },
+  { icon: "📵", label: "Nenhum dado pessoal nos relatórios" },
+  { icon: "✅", label: "Pronto para auditoria da NR-01" },
 ];
 
 // ── Main ──────────────────────────────────────────────────────────────────────
@@ -203,7 +206,7 @@ export default function LandingPage() {
       <style>{`
         .sr { opacity:0; transform:translateY(28px); transition: opacity 0.6s cubic-bezier(0.22,1,0.36,1), transform 0.6s cubic-bezier(0.22,1,0.36,1); }
         .sr.sr-in { opacity:1; transform:none; }
-        @media(max-width:768px){ .desk-nav{display:none!important} .mock-hero{display:none!important} .contact-grid{grid-template-columns:1fr!important;gap:40px!important} }
+        @media(max-width:768px){ .desk-nav{display:none!important} .mock-hero{display:none!important} .contact-grid{grid-template-columns:1fr!important;gap:40px!important} .security-grid{grid-template-columns:repeat(2,1fr)!important} }
         @media(min-width:769px){ .mob-btn{display:none!important} }
       `}</style>
 
@@ -371,11 +374,11 @@ export default function LandingPage() {
           <h2 className="sr" style={{ fontSize: "clamp(1.8rem,4vw,2.8rem)", fontWeight: 800, marginBottom: 56 }}>
             Sua Confiança é Nossa Prioridade
           </h2>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(160px,1fr))", gap: 20 }}>
+          <div className="security-grid" style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 20 }}>
             {SECURITY.map((s, i) => (
-              <div key={i} className="sr" style={{ transitionDelay: `${i * 80}ms`, background: "rgba(255,255,255,0.03)", border: "1px solid rgba(91,158,201,0.14)", borderRadius: 16, padding: "24px 16px", display: "flex", flexDirection: "column", alignItems: "center", gap: 12 }}>
-                <span style={{ fontSize: 28 }}>{s.icon}</span>
-                <span style={{ fontSize: 13, fontWeight: 600, color: "rgba(255,255,255,0.75)" }}>{s.label}</span>
+              <div key={i} className="sr" style={{ transitionDelay: `${i * 80}ms`, background: "rgba(255,255,255,0.03)", border: "1px solid rgba(91,158,201,0.14)", borderRadius: 16, padding: "28px 20px", display: "flex", flexDirection: "column", alignItems: "center", gap: 10, textAlign: "center" }}>
+                <span style={{ fontSize: 32 }}>{s.icon}</span>
+                <span style={{ fontSize: 14, fontWeight: 600, lineHeight: 1.4, color: "rgba(255,255,255,0.8)" }}>{s.label}</span>
               </div>
             ))}
           </div>

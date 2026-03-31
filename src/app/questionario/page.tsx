@@ -87,7 +87,7 @@ function QuestionarioInner() {
 
   const handleFinish = async () => {
     if (!CAMPAIGN_ID) {
-      setSubmitError("Link inválido: campanha não identificada. Use o QR Code ou link fornecido pela empresa.");
+      setSubmitError("Link inválido: avaliação não identificada. Use o QR Code ou link fornecido pela empresa.");
       return;
     }
     setSubmitting(true);

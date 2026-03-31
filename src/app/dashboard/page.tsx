@@ -30,11 +30,21 @@ type AnonymousInsightGroup = {
   latestResponseDate: string | null;
   topTopics: { topicId: number; topicName: string; averageScore: number; riskLevel: string }[];
 };
+type BenchmarkingData = {
+  segment: string;
+  benchmarking: { topicId: number; topicName: string; averageScore: number; sampleSize: number }[];
+};
+type EvolutionData = {
+  date: string;
+  campaign: string;
+  overall: number;
+  topics: { topicId: number; topicName: string; score: number }[];
+}[];
 
 const RISK_COLORS: Record<string, string> = { LOW: "#5baa6d", MEDIUM: "#f59e0b", HIGH: "#f97316", CRITICAL: "#dc2626" };
 const RISK_LABELS: Record<string, string> = { LOW: "Baixo", MEDIUM: "Moderado", HIGH: "Alto", CRITICAL: "Crítico" };
 const RISK_BG: Record<string, string> = { LOW: "rgba(91,170,109,0.1)", MEDIUM: "rgba(245,158,11,0.1)", HIGH: "rgba(249,115,22,0.1)", CRITICAL: "rgba(220,38,38,0.1)" };
-const STATUS_LABEL: Record<string, string> = { DRAFT: "Rascunho", ACTIVE: "Ativa", CLOSED: "Encerrada", ARCHIVED: "Arquivada" };
+const STATUS_LABEL: Record<string, string> = { DRAFT: "Rascunho", ACTIVE: "Aberta", CLOSED: "Encerrada", ARCHIVED: "Arquivada" };
 const STATUS_DOT: Record<string, string> = { DRAFT: "#9ca3af", ACTIVE: "#5baa6d", CLOSED: "#f59e0b", ARCHIVED: "#d1d5db" };
 
 function getRisk(score: number) {
@@ -47,10 +57,10 @@ function RiskBadge({ score }: { score: number }) {
 
 // ── Onboarding Tour ────────────────────────────────────────────────────────────
 const TOUR_STEPS = [
-  { title: "Bem-vindo ao DRPS Dashboard!", body: "Aqui você acompanha os resultados das campanhas de diagnóstico psicossocial da sua empresa em tempo real.", icon: "👋" },
-  { title: "Selecione uma Campanha", body: "Use o seletor no topo para alternar entre campanhas. O dashboard atualiza automaticamente com os dados correspondentes.", icon: "📋" },
+  { title: "Bem-vindo ao DRPS Dashboard!", body: "Aqui você acompanha os resultados das avaliações de diagnóstico psicossocial da sua empresa em tempo real.", icon: "👋" },
+  { title: "Selecione uma Avaliação", body: "Use o seletor no topo para alternar entre avaliações. O dashboard atualiza automaticamente com os dados correspondentes.", icon: "📋" },
   { title: "Explore os Gráficos", body: "O gráfico radar mostra o perfil de risco por tópico. As barras mostram os scores. Filtre por setor para ver dados específicos.", icon: "📊" },
-  { title: "Use a Análise de IA", body: "Clique em 'Análise IA' para obter insights automáticos gerados pelo Claude sobre os riscos identificados na campanha.", icon: "🤖" },
+  { title: "Use a Análise de IA", body: "Clique em 'Análise IA' para obter insights automáticos gerados pelo Claude sobre os riscos identificados na avaliação.", icon: "🤖" },
   { title: "Exporte os Dados", body: "Baixe o relatório em PDF ou exporte os dados em CSV para apresentações e análises externas.", icon: "📄" },
 ];
 
@@ -89,11 +99,15 @@ function OnboardingTour({ onClose }: { onClose: () => void }) {
 // ── Notification Bell ──────────────────────────────────────────────────────────
 function NotificationBell({ companyId }: { companyId: string }) {
   const [alerts, setAlerts] = useState<Alert[]>([]);
+  const [schedulingUrl, setSchedulingUrl] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    fetch("/api/alerts").then((r) => r.json()).then((d) => setAlerts(d.alerts ?? [])).catch(() => {});
+    fetch("/api/alerts").then((r) => r.json()).then((d) => {
+      setAlerts(d.alerts ?? []);
+      setSchedulingUrl(d.schedulingUrl);
+    }).catch(() => {});
   }, [companyId]);
 
   useEffect(() => {
@@ -135,6 +149,11 @@ function NotificationBell({ companyId }: { companyId: string }) {
                   <div style={{ flex: 1 }}>
                     <p className="text-xs font-semibold mb-0.5" style={{ color: "#1e3a4a" }}>{a.sector}</p>
                     <p className="text-xs" style={{ color: "#7a9aaa" }}>{a.message}</p>
+                    {(a.riskLevel === "CRITICAL" || a.riskLevel === "HIGH") && schedulingUrl && (
+                      <a href={schedulingUrl} target="_blank" rel="noopener noreferrer" className="inline-block mt-2 text-[10px] font-bold text-white bg-[#2e7fa3] px-2 py-1 rounded-lg">
+                        Agendar Consultoria 📅
+                      </a>
+                    )}
                   </div>
                   <button onClick={() => markRead(a.id)} style={{ background: "none", border: "none", fontSize: 14, cursor: "pointer", color: "#7a9aaa", padding: "0 4px" }}>✕</button>
                 </div>
@@ -177,6 +196,8 @@ export default function DashboardPage() {
   const [compareCampaignId, setCompareCampaignId] = useState("");
   const [data, setData] = useState<DashboardData | null>(null);
   const [compareData, setCompareData] = useState<DashboardData | null>(null);
+  const [benchmarkingData, setBenchmarkingData] = useState<BenchmarkingData | null>(null);
+  const [evolutionData, setEvolutionData] = useState<EvolutionData | null>(null);
   const [loading, setLoading] = useState(true);
   const [sector, setSector] = useState("all");
   const [qrCode, setQrCode] = useState<string | null>(null);
@@ -217,6 +238,16 @@ export default function DashboardPage() {
         setLoading(false);
       })
       .catch(() => setLoading(false));
+
+    // Fetch Benchmarking
+    fetch("/api/companies/benchmarking")
+      .then((r) => r.json())
+      .then((d) => { if (!d.error) setBenchmarkingData(d); });
+
+    // Fetch Evolution
+    fetch("/api/snapshots/evolution")
+      .then((r) => r.json())
+      .then((d) => { if (!d.error) setEvolutionData(d); });
   }, [router]);
 
   function closeOnboarding() {
@@ -304,13 +335,13 @@ export default function DashboardPage() {
   const activeCampaign = campaigns.find((c) => c.id === activeCampaignId);
   const compareCampaign = campaigns.find((c) => c.id === compareCampaignId);
   const roleLabel = me?.role === "MANAGER" ? "Gestor de setor" : me?.role === "HR" ? "RH" : me?.role === "ADMIN" ? "Administrador" : me?.role ?? "";
-  const canManageCompany = ["SUPER_ADMIN", "ADMIN", "HR"].includes(me?.role ?? "");
+  const canManageCompany = ["OWNER", "ADMIN", "HR"].includes(me?.role ?? "");
 
   return (
     <SidebarShell
       badge="Dashboard da Empresa"
-      title={me?.company?.name ?? "Tenant"}
-      subtitle="Analytics corporativo anônimo por campanha e coortes com limiar mínimo de anonimização."
+      title={me?.company?.name ?? "Empresa"}
+      subtitle="Analytics corporativo anônimo por avaliação e coortes com limiar mínimo de anonimização."
       userName={me?.name}
       userRole={roleLabel}
       nav={[
@@ -420,8 +451,8 @@ export default function DashboardPage() {
         {campaigns.length === 0 && (
           <div className="card-3d p-16 text-center fade-up">
             <div className="text-5xl mb-4">📋</div>
-            <h2 className="text-xl font-bold mb-2" style={{ color: "#1e3a4a" }}>Nenhuma campanha encontrada</h2>
-            <p className="text-sm" style={{ color: "#7a9aaa" }}>Solicite ao consultor All Lives para criar sua primeira campanha.</p>
+            <h2 className="text-xl font-bold mb-2" style={{ color: "#1e3a4a" }}>Nenhuma avaliação encontrada</h2>
+            <p className="text-sm" style={{ color: "#7a9aaa" }}>Solicite ao consultor All Lives para criar sua primeira avaliação.</p>
           </div>
         )}
 
@@ -429,7 +460,7 @@ export default function DashboardPage() {
         {showQr && qrCode && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "rgba(0,0,0,0.4)" }} onClick={() => setShowQr(false)}>
             <div className="card-3d p-8 max-w-sm w-full text-center" onClick={(e) => e.stopPropagation()}>
-              <h3 className="text-lg font-bold mb-2" style={{ color: "#1e3a4a" }}>Link da Campanha</h3>
+              <h3 className="text-lg font-bold mb-2" style={{ color: "#1e3a4a" }}>Link da Avaliação</h3>
               <p className="text-xs mb-4" style={{ color: "#7a9aaa" }}>Compartilhe com os funcionários de <strong>{me?.company?.name}</strong></p>
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={qrCode} alt="QR Code" className="mx-auto mb-4 rounded-xl" width={200} height={200} />
@@ -455,7 +486,7 @@ export default function DashboardPage() {
           <div className="card-3d p-16 text-center fade-up">
             <div className="text-5xl mb-4">📊</div>
             <h2 className="text-xl font-bold mb-2" style={{ color: "#1e3a4a" }}>Nenhuma resposta ainda</h2>
-            <p className="text-sm mb-6" style={{ color: "#7a9aaa" }}>Compartilhe o link ou QR Code da campanha com os funcionários.</p>
+            <p className="text-sm mb-6" style={{ color: "#7a9aaa" }}>Compartilhe o link ou QR Code da avaliação com os funcionários.</p>
             <div className="flex justify-center gap-3">
               <button onClick={loadQr} className="btn-primary inline-flex items-center gap-2">📱 Ver QR Code</button>
               <Link href="/questionario" className="btn-ghost inline-flex items-center gap-2">Testar questionário</Link>
@@ -547,6 +578,77 @@ export default function DashboardPage() {
                 )}
               </div>
             </div>
+
+            {/* Benchmarking Section (fix #4) */}
+            {benchmarkingData && benchmarkingData.benchmarking && (
+              <div className="card-3d-sm p-6 mb-8 fade-up border-l-4 border-[#2e7fa3]">
+                <h2 className="text-sm font-semibold mb-1" style={{ color: "#1e3a4a" }}>Benchmarking Setorial: {benchmarkingData.segment}</h2>
+                <p className="text-xs mb-6" style={{ color: "#7a9aaa" }}>Sua empresa comparada à média do mercado.</p>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {data.topicAverages.slice(0, 6).map((topic) => {
+                    const market = benchmarkingData.benchmarking.find(b => b.topicId === topic.topicId);
+                    if (!market) return null;
+                    const diff = topic.averageScore - market.averageScore;
+                    return (
+                      <div key={topic.topicId} className="flex flex-col gap-2">
+                        <div className="flex justify-between items-center">
+                          <span className="text-xs font-medium" style={{ color: "#5a7a8a" }}>{topic.topicName}</span>
+                          <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${diff > 5 ? "bg-red-100 text-red-700" : diff < -5 ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-700"}`}>
+                            {diff > 0 ? "+" : ""}{Math.round(diff)}% vs Mercado
+                          </span>
+                        </div>
+                        <div className="relative pt-4">
+                          <div className="h-2 w-full rounded-full bg-gray-100">
+                            <div className="absolute top-0 h-2 rounded-full z-10" style={{ width: `${topic.averageScore}%`, background: RISK_COLORS[getRisk(topic.averageScore)] }} />
+                            <div className="absolute top-0 h-2 rounded-full border-r-2 border-black z-20" style={{ width: `${market.averageScore}%` }} />
+                          </div>
+                          <div className="flex justify-between mt-1">
+                            <span className="text-[9px]" style={{ color: "#7a9aaa" }}>Sua: {Math.round(topic.averageScore)}%</span>
+                            <span className="text-[9px]" style={{ color: "#1e3a4a", fontWeight: 700 }}>Média: {Math.round(market.averageScore)}%</span>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Evolution Heatmap Section (fix #6) */}
+            {evolutionData && evolutionData.length > 1 && (
+              <div className="card-3d-sm p-6 mb-8 fade-up">
+                <h2 className="text-sm font-semibold mb-4" style={{ color: "#1e3a4a" }}>Histórico de Evolução</h2>
+                <div className="overflow-x-auto">
+                  <div className="min-w-[600px] flex gap-2">
+                    {evolutionData.map((ev, i) => (
+                      <div key={i} className="flex-1 min-w-[120px]">
+                        <div className="text-[10px] font-bold text-center mb-2" style={{ color: "#7a9aaa" }}>{new Date(ev.date).toLocaleDateString("pt-BR", { month: "short", year: "2-digit" })}</div>
+                        <div className="space-y-1">
+                          {(ev.topics as any[]).map((t) => (
+                            <div key={t.topicId} className="h-6 rounded text-[8px] flex items-center justify-center font-bold text-white transition-all hover:scale-105" 
+                              style={{ background: RISK_COLORS[getRisk(t.score)], opacity: 0.8 }}
+                              title={`${t.topicName}: ${Math.round(t.score)}%`}>
+                              {Math.round(t.score)}%
+                            </div>
+                          ))}
+                        </div>
+                        <div className="mt-2 pt-2 border-t text-center font-bold text-[10px]" style={{ color: RISK_COLORS[getRisk(ev.overall)] }}>
+                          {Math.round(ev.overall)}%
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <div className="mt-4 flex gap-4 justify-center">
+                  {Object.entries(RISK_LABELS).map(([k, v]) => (
+                    <div key={k} className="flex items-center gap-1.5">
+                      <div className="w-3 h-3 rounded" style={{ background: RISK_COLORS[k] }} />
+                      <span className="text-[10px]" style={{ color: "#7a9aaa" }}>{v}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Topic table */}
             <div className="card-3d-sm overflow-hidden mb-6">

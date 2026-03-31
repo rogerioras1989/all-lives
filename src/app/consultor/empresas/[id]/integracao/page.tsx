@@ -171,7 +171,7 @@ export default function IntegracaoPage() {
 ]`}
             </pre>
             <p className="text-xs mt-3" style={{ color: "#aac0cc" }}>
-              Funcionários existentes só são atualizados dentro do mesmo tenant. Novos registros recebem PIN aleatório e exigem provisionamento seguro fora do webhook.
+              Funcionários existentes só são atualizados dentro da mesma empresa. Novos registros recebem PIN aleatório e exigem provisionamento seguro fora do webhook.
             </p>
           </div>
         )}
@@ -207,7 +207,7 @@ export default function IntegracaoPage() {
           <h2 className="text-sm font-semibold mb-3" style={{ color: "#1e3a4a" }}>👥 Papéis disponíveis</h2>
           <div className="space-y-2">
             {[
-              { role: "ADMIN", desc: "Acesso total à empresa — cria campanhas, gerencia usuários" },
+              { role: "ADMIN", desc: "Acesso total à empresa — aplica avaliações, gerencia usuários" },
               { role: "HR", desc: "Importa funcionários, visualiza todos os setores" },
               { role: "MANAGER", desc: "Vê apenas os dados do seu próprio setor" },
               { role: "EMPLOYEE", desc: "Responde questionários, acessa o portal pessoal" },

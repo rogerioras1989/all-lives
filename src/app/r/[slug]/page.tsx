@@ -16,10 +16,10 @@ export default async function CampaignRedirectPage({ params }: Props) {
         <div className="card-3d p-10 text-center max-w-sm">
           <div className="text-4xl mb-4">📦</div>
           <h2 className="text-xl font-bold mb-2" style={{ color: "#1e3a4a" }}>
-            Campanha encerrada
+            Avaliação encerrada
           </h2>
           <p className="text-sm" style={{ color: "#7a9aaa" }}>
-            Esta campanha não está mais disponível.
+            Esta avaliação não está mais disponível.
           </p>
         </div>
       </main>
@@ -31,10 +31,10 @@ export default async function CampaignRedirectPage({ params }: Props) {
         <div className="card-3d p-10 text-center max-w-sm">
           <div className="text-4xl mb-4">⏳</div>
           <h2 className="text-xl font-bold mb-2" style={{ color: "#1e3a4a" }}>
-            Campanha não disponível
+            Avaliação não disponível
           </h2>
           <p className="text-sm" style={{ color: "#7a9aaa" }}>
-            Esta campanha ainda não foi iniciada.
+            Esta avaliação ainda não foi iniciada.
           </p>
         </div>
       </main>

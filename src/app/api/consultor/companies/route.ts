@@ -43,9 +43,6 @@ export async function POST(req: NextRequest) {
     const companyName = String(body.name ?? "").trim();
     const cnpj = String(body.cnpj ?? "").trim() || null;
     const slugInput = String(body.slug ?? "").trim();
-    const createInitialCampaign = body.createInitialCampaign !== false;
-    const campaignTitle = String(body.campaignTitle ?? "").trim();
-    const createInitialAdmin = body.createInitialAdmin !== false;
     const adminName = String(body.adminName ?? "").trim();
     const adminEmail = String(body.adminEmail ?? "").trim().toLowerCase() || null;
     const adminCpf = String(body.adminCpf ?? "").trim();
@@ -53,6 +50,8 @@ export async function POST(req: NextRequest) {
     const adminSector = String(body.adminSector ?? "").trim() || "Recursos Humanos";
     const adminJobTitle = String(body.adminJobTitle ?? "").trim() || "Administrador do tenant";
     const logoUrl = String(body.logoUrl ?? "").trim() || null;
+    const createInitialAdmin =
+      Boolean(adminName && adminCpf && adminPin);
 
     if (!companyName) {
       return NextResponse.json({ error: "Nome da empresa é obrigatório" }, { status: 400 });
@@ -140,17 +139,16 @@ export async function POST(req: NextRequest) {
         },
       });
 
-      const campaign = createInitialCampaign
-        ? await tx.campaign.create({
-            data: {
-              title: campaignTitle || "Campanha inicial de diagnóstico",
-              description: "Campanha criada no cadastro inicial do tenant",
-              status: "DRAFT",
-              slug: `${finalSlug}-campanha-${Date.now()}`,
-              companyId: company.id,
-            },
-          })
-        : null;
+      const campaign = await tx.campaign.create({
+        data: {
+          title: `Avaliação NR-01 — ${companyName}`,
+          description: "Campanha criada automaticamente no cadastro do tenant",
+          status: "ACTIVE",
+          slug: `avaliacao-${slugify(companyName)}-${Date.now()}`,
+          startDate: new Date(),
+          companyId: company.id,
+        },
+      });
 
       const admin = createInitialAdmin
         ? await tx.user.create({
@@ -182,7 +180,7 @@ export async function POST(req: NextRequest) {
         metadata: {
           companyName: company.name,
           slug: company.slug,
-          hasInitialCampaign: Boolean(campaign),
+          hasInitialCampaign: true,
           hasInitialAdmin: Boolean(admin),
         },
       });

@@ -86,7 +86,7 @@ export default function ImportarPage() {
             <div>
               <p className="text-sm font-semibold" style={{ color: "#9a6700" }}>Importação bloqueada para analistas</p>
               <p className="text-xs mt-1 leading-relaxed" style={{ color: "#7a6a4a" }}>
-                O layout do CSV permanece visível para consulta, mas apenas perfis com gestão do tenant podem subir novos colaboradores.
+                O layout do CSV permanece visível para consulta, mas apenas perfis com gestão da empresa podem subir novos colaboradores.
               </p>
             </div>
           </div>

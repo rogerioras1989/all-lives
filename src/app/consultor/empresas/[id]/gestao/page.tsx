@@ -169,7 +169,7 @@ export default function TenantGestaoPage() {
     return [
       { label: "Empresa cadastrada", done: company.onboarding.companyCreated },
       { label: "Admin inicial", done: company.onboarding.adminCreated },
-      { label: "Campanha inicial", done: company.onboarding.campaignCreated },
+      { label: "Avaliação inicial", done: company.onboarding.campaignCreated },
       { label: "Integração RH", done: company.onboarding.integrationConfigured },
       { label: "Primeira resposta", done: company.onboarding.firstResponseReceived },
     ];
@@ -259,7 +259,7 @@ export default function TenantGestaoPage() {
 
   async function cloneCampaign() {
     if (!cloneForm.sourceCampaignId) {
-      setCloneError("Selecione uma campanha base para duplicar.");
+      setCloneError("Selecione uma avaliação base para duplicar.");
       return;
     }
 
@@ -274,7 +274,7 @@ export default function TenantGestaoPage() {
       });
       const payload = await response.json();
       if (!response.ok) {
-        setCloneError(payload.error ?? "Não foi possível duplicar a campanha.");
+        setCloneError(payload.error ?? "Não foi possível duplicar a avaliação.");
         return;
       }
       await reloadCompany();
@@ -315,7 +315,7 @@ export default function TenantGestaoPage() {
             <div>
               <p className="text-sm font-semibold" style={{ color: "#9a6700" }}>Modo somente leitura</p>
               <p className="text-xs mt-1 leading-relaxed" style={{ color: "#7a6a4a" }}>
-                Analistas podem inspecionar onboarding, saúde do tenant e vínculos existentes, mas não podem editar empresa, gerenciar acessos ou duplicar campanhas.
+                Analistas podem inspecionar o progresso e vínculos existentes, mas não podem editar empresa, gerenciar acessos ou duplicar avaliações.
               </p>
             </div>
           </div>
@@ -393,7 +393,7 @@ export default function TenantGestaoPage() {
         <div className="card-3d-sm p-6">
           <div className="flex items-center justify-between gap-3">
             <div>
-              <h2 className="text-sm font-semibold" style={{ color: "#1e3a4a" }}>Dados do tenant</h2>
+              <h2 className="text-sm font-semibold" style={{ color: "#1e3a4a" }}>Dados da empresa</h2>
               <p className="mt-1 text-xs" style={{ color: "#7a9aaa" }}>
                 Atualize dados cadastrais, logo e slug com validações de CNPJ, duplicidade e conflito de slug.
               </p>
@@ -468,9 +468,9 @@ export default function TenantGestaoPage() {
         <div className="card-3d-sm p-6">
           <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
             <div>
-              <h2 className="text-sm font-semibold" style={{ color: "#1e3a4a" }}>Acesso All Lives por tenant</h2>
+              <h2 className="text-sm font-semibold" style={{ color: "#1e3a4a" }}>Acesso All Lives</h2>
               <p className="mt-1 text-xs" style={{ color: "#7a9aaa" }}>
-                Vincule consultores e analistas existentes por e-mail e defina o papel no tenant. As ações ficam registradas na auditoria.
+                Vincule consultores e analistas existentes por e-mail. As ações ficam registradas na auditoria.
               </p>
             </div>
           </div>
@@ -529,7 +529,7 @@ export default function TenantGestaoPage() {
               />
             </label>
             <label className="text-xs font-medium" style={{ color: "#5a7a8a" }}>
-              Papel no tenant
+              Papel
               <select
                 value={linkForm.role}
                 onChange={(event) => setLinkForm((current) => ({ ...current, role: event.target.value }))}
@@ -563,16 +563,16 @@ export default function TenantGestaoPage() {
         <div className="card-3d-sm p-6">
           <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
             <div>
-              <h2 className="text-sm font-semibold" style={{ color: "#1e3a4a" }}>Duplicar campanha por template</h2>
+              <h2 className="text-sm font-semibold" style={{ color: "#1e3a4a" }}>Duplicar avaliação</h2>
               <p className="mt-1 text-xs" style={{ color: "#7a9aaa" }}>
-                Crie uma nova campanha em rascunho a partir de uma campanha base deste tenant, preservando a estrutura operacional.
+                Crie uma nova avaliação a partir de uma existente, preservando a estrutura operacional.
               </p>
             </div>
           </div>
 
           <div className="mt-5 grid gap-4 md:grid-cols-[1fr_1fr_auto]">
             <label className="text-xs font-medium" style={{ color: "#5a7a8a" }}>
-              Campanha base
+              Avaliação base
               <select
                 value={cloneForm.sourceCampaignId}
                 onChange={(event) => setCloneForm((current) => ({ ...current, sourceCampaignId: event.target.value }))}
@@ -589,7 +589,7 @@ export default function TenantGestaoPage() {
               </select>
             </label>
             <label className="text-xs font-medium" style={{ color: "#5a7a8a" }}>
-              Título da nova campanha
+              Título da nova avaliação
               <input
                 type="text"
                 value={cloneForm.title}
@@ -607,7 +607,7 @@ export default function TenantGestaoPage() {
                 onClick={cloneCampaign}
                 disabled={cloning || (company?.campaigns.length ?? 0) === 0}
               >
-                {cloning ? "Duplicando..." : "Duplicar campanha"}
+                {cloning ? "Duplicando..." : "Duplicar avaliação"}
               </button>
             )}
           </div>

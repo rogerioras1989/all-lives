@@ -106,7 +106,7 @@ export default function PortalPage() {
           <div className="rounded-2xl p-5 fade-up flex items-center justify-between gap-4"
             style={{ background: "rgba(46,127,163,0.08)", border: "1px solid rgba(46,127,163,0.2)" }}>
             <div>
-              <p className="text-sm font-semibold" style={{ color: "#1e5f7a" }}>📋 Campanha ativa: {activeCampaign.title}</p>
+              <p className="text-sm font-semibold" style={{ color: "#1e5f7a" }}>📋 Avaliação aberta: {activeCampaign.title}</p>
               <p className="text-xs mt-0.5" style={{ color: "#7a9aaa" }}>
                 A pesquisa é anônima. O sistema não confirma individualmente quem já respondeu.
               </p>
@@ -156,14 +156,14 @@ export default function PortalPage() {
               </p>
               <p className="text-xs mt-2 leading-relaxed" style={{ color: "#7a9aaa" }}>
                 Para preservar a confidencialidade, a plataforma não mantém histórico individual das respostas nem mostra confirmação pessoal de participação.
-                Os indicadores exibidos abaixo são agregados por setor e campanha.
+                Os indicadores exibidos abaixo são agregados por setor e avaliação.
               </p>
             </div>
           </div>
 
           {/* Sector metrics */}
           <div className="card-3d-sm p-5 fade-up">
-            <h2 className="text-sm font-semibold mb-4" style={{ color: "#1e3a4a" }}>👥 Seu setor na última campanha</h2>
+            <h2 className="text-sm font-semibold mb-4" style={{ color: "#1e3a4a" }}>👥 Seu setor na última avaliação</h2>
             {!sectorMetrics ? (
               <p className="text-xs text-center py-6" style={{ color: "#aac0cc" }}>Sem dados de setor disponíveis</p>
             ) : (

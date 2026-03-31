@@ -215,10 +215,9 @@ export default function EmpresaDashboardPage() {
       >
         <div className="mx-auto max-w-5xl">
           <div className="card-3d-sm p-6 fade-up">
-            <h2 className="text-sm font-semibold" style={{ color: "#1e3a4a" }}>Tenant sem campanha</h2>
+            <h2 className="text-sm font-semibold" style={{ color: "#1e3a4a" }}>Empresa sem avaliação</h2>
             <p className="mt-2 text-sm leading-relaxed" style={{ color: "#5a7a8a" }}>
-              Esta empresa ainda não possui campanha cadastrada. No cadastro do tenant você pode criar uma campanha
-              inicial em rascunho para liberar a operação imediatamente.
+              Esta empresa ainda não possui avaliação cadastrada. Ao cadastrar a empresa uma avaliação é criada automaticamente.
             </p>
           </div>
         </div>
@@ -236,7 +235,7 @@ export default function EmpresaDashboardPage() {
         <>
           <a href={`/api/campaigns/${campaignId}/pdf`} target="_blank" className="btn-ghost text-xs px-3 py-2">📄 PDF</a>
           <button onClick={takeSnapshot} disabled={takingSnapshot || readOnly} className="btn-primary text-xs px-3 py-2" style={{ opacity: readOnly ? 0.5 : 1 }}>
-            📸 {takingSnapshot ? "Salvando…" : "Snapshot"}
+            📸 {takingSnapshot ? "Salvando…" : "Salvar Histórico"}
           </button>
         </>
       }
@@ -249,7 +248,7 @@ export default function EmpresaDashboardPage() {
             <div>
               <p className="text-sm font-semibold" style={{ color: "#9a6700" }}>Modo somente leitura</p>
               <p className="text-xs mt-1 leading-relaxed" style={{ color: "#7a6a4a" }}>
-                Analistas All Lives podem consultar snapshots, alertas, comentários e planos, mas não podem alterar operações do tenant.
+                Analistas All Lives podem consultar históricos, alertas, comentários e planos, mas não podem alterar operações da empresa.
               </p>
             </div>
           </div>
@@ -261,7 +260,7 @@ export default function EmpresaDashboardPage() {
               Evolução Temporal — Scores por Tópico
             </h2>
             <span className="text-xs" style={{ color: "#7a9aaa" }}>
-              {snapshots.length} snapshots registrados
+              {snapshots.length} históricos registrados
             </span>
           </div>
 
@@ -273,10 +272,10 @@ export default function EmpresaDashboardPage() {
             <div className="h-64 flex flex-col items-center justify-center gap-3">
               <div className="text-4xl">📸</div>
               <p className="text-sm text-center" style={{ color: "#7a9aaa" }}>
-                Salve ao menos 2 snapshots para ver a evolução temporal.
+                Salve ao menos 2 históricos para ver a evolução temporal.
               </p>
               <p className="text-xs text-center" style={{ color: "#aac0cc" }}>
-                Clique em <strong>Salvar Snapshot</strong> para registrar o estado atual.
+                Clique em <strong>Salvar Histórico</strong> para registrar o estado atual.
               </p>
             </div>
           ) : (
@@ -318,7 +317,7 @@ export default function EmpresaDashboardPage() {
         {snapshots.length > 0 && (
           <div className="card-3d-sm overflow-hidden mb-8 fade-up">
             <div className="px-6 py-4 border-b" style={{ borderColor: "rgba(91,158,201,0.1)" }}>
-              <h2 className="text-sm font-semibold" style={{ color: "#1e3a4a" }}>Histórico de Snapshots</h2>
+              <h2 className="text-sm font-semibold" style={{ color: "#1e3a4a" }}>Histórico de avaliações</h2>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
@@ -452,7 +451,7 @@ export default function EmpresaDashboardPage() {
 
           {actionPlans.length === 0 && !showPlanForm ? (
             <div className="px-6 py-8 text-center">
-              <p className="text-xs" style={{ color: "#aac0cc" }}>Nenhum plano de ação criado para esta campanha</p>
+              <p className="text-xs" style={{ color: "#aac0cc" }}>Nenhum plano de ação criado para esta avaliação</p>
             </div>
           ) : (
             <div className="divide-y" style={{ borderColor: "rgba(91,158,201,0.08)" }}>

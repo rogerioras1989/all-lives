@@ -98,12 +98,12 @@ export function ConsultorTenantShell({
 
   const subtitle = useMemo(() => {
     if (!company) {
-      return "Painel operacional do tenant com analytics anônimo, auditoria e integrações.";
+      return "Painel operacional da empresa com analytics anônimo, auditoria e integrações.";
     }
 
     const parts = [
       `${company.totalUsers} usuário(s)`,
-      `${company.totalCampaigns} campanha(s)`,
+      `${company.totalCampaigns} avaliação(ões)`,
       `${company.unresolvedAlerts ?? 0} alerta(s)`,
       `${company.openActionPlans ?? 0} plano(s)`,
     ];
@@ -117,14 +117,14 @@ export function ConsultorTenantShell({
 
   return (
     <SidebarShell
-      badge="Tenant Cliente"
-      title={company?.name ?? "Tenant"}
+      badge="Empresa"
+      title={company?.name ?? "Empresa"}
       subtitle={subtitle}
       userName="Equipe All Lives"
       userRole={viewerRoleLabel}
       nav={[
         { href: "/consultor", label: "Visão global", icon: "🌐" },
-        { href: `/consultor/empresas/${tenantId}`, label: "Painel do tenant", icon: "🏢" },
+        { href: `/consultor/empresas/${tenantId}`, label: "Painel da empresa", icon: "🏢" },
         { href: `/consultor/empresas/${tenantId}/gestao`, label: "Gestão", icon: "⚙️", disabled: readOnly },
         { href: `/consultor/empresas/${tenantId}/auditoria`, label: "Auditoria", icon: "📋" },
         { href: `/consultor/empresas/${tenantId}/integracao`, label: "Integração RH", icon: "🔗", disabled: readOnly },

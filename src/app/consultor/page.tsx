@@ -122,17 +122,6 @@ const RISK_ORDER: Record<string, number> = {
 const initialCreateForm = {
   name: "",
   cnpj: "",
-  slug: "",
-  logoUrl: "",
-  createInitialCampaign: true,
-  campaignTitle: "",
-  createInitialAdmin: true,
-  adminName: "",
-  adminEmail: "",
-  adminCpf: "",
-  adminPin: "",
-  adminSector: "Recursos Humanos",
-  adminJobTitle: "Administrador do tenant",
 };
 
 function matchesBinaryFilter(value: boolean, filter: BinaryFilter) {
@@ -173,7 +162,7 @@ function getOnboardingSteps(company: CompanyCard) {
   return [
     { label: "Empresa", done: company.onboarding.companyCreated },
     { label: "Admin", done: company.onboarding.adminCreated },
-    { label: "Campanha", done: company.onboarding.campaignCreated },
+    { label: "Avaliação", done: company.onboarding.campaignCreated },
     { label: "Integração RH", done: company.onboarding.integrationConfigured },
     { label: "1ª resposta", done: company.onboarding.firstResponseReceived },
   ];
@@ -196,7 +185,6 @@ export default function ConsultorPage() {
   const [planFilter, setPlanFilter] = useState<BinaryFilter>("ALL");
   const [activityFilter, setActivityFilter] = useState<ActivityFilter>("ALL");
   const [showCreateForm, setShowCreateForm] = useState(false);
-  const [wizardStep, setWizardStep] = useState(1);
   const [creatingCompany, setCreatingCompany] = useState(false);
   const [createError, setCreateError] = useState("");
   const [createForm, setCreateForm] = useState(initialCreateForm);
@@ -245,16 +233,12 @@ export default function ConsultorPage() {
       const payload = await response.json();
 
       if (!response.ok) {
-        if (payload.suggestedSlug) {
-          setCreateForm((current) => ({ ...current, slug: payload.suggestedSlug }));
-        }
         setCreateError(payload.error ?? "Não foi possível cadastrar a empresa.");
         return;
       }
 
       await refreshOverview();
       setShowCreateForm(false);
-      setWizardStep(1);
       setCreateForm(initialCreateForm);
       router.push(
         `/consultor/empresas/${payload.company.id}${payload.campaign ? `?campaign=${payload.campaign.id}` : ""}`
@@ -326,7 +310,7 @@ export default function ConsultorPage() {
       <main className="min-h-screen gradient-hero flex items-center justify-center">
         <div className="flex flex-col items-center gap-3">
           <div className="h-8 w-8 animate-spin rounded-full border-2" style={{ borderColor: "#2e7fa3", borderTopColor: "transparent" }} />
-          <p className="text-sm" style={{ color: "#7a9aaa" }}>Carregando visão global...</p>
+          <p className="text-sm" style={{ color: "#7a9aaa" }}>Carregando painel...</p>
         </div>
       </main>
     );
@@ -336,22 +320,16 @@ export default function ConsultorPage() {
 
   const viewerRoleLabel = ROLE_LABEL[data.viewer.role] ?? data.viewer.role;
   const canManageTenants = data.viewer.role !== "ANALYST";
-  const wizardSteps = [
-    { id: 1, title: "Empresa" },
-    { id: 2, title: "Campanha" },
-    { id: 3, title: "Admin" },
-    { id: 4, title: "Revisão" },
-  ];
 
   return (
     <SidebarShell
-      badge="Backoffice All Lives"
-      title="Visão Global"
-      subtitle="Carteira multi-tenant com onboarding, saúde operacional, filtros avançados e gestão do acesso All Lives."
+      badge="Painel All Lives"
+      title="Empresas"
+      subtitle="Gerencie as empresas e acompanhe os resultados das avaliações."
       userName="Equipe All Lives"
       userRole={viewerRoleLabel}
       nav={[
-        { href: "/consultor", label: "Dashboard global", icon: "🌐" },
+        { href: "/consultor", label: "Painel geral", icon: "🌐" },
       ]}
       actions={<Link href="/" className="btn-ghost text-xs px-3 py-2">← Home</Link>}
     >
@@ -359,9 +337,9 @@ export default function ConsultorPage() {
         <div className="card-3d-sm p-6 mb-8">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
             <div>
-              <h2 className="text-sm font-semibold" style={{ color: "#1e3a4a" }}>Onboarding guiado de tenant</h2>
+              <h2 className="text-sm font-semibold" style={{ color: "#1e3a4a" }}>Cadastrar nova empresa</h2>
               <p className="mt-1 text-xs" style={{ color: "#7a9aaa" }}>
-                Cadastre a empresa, gere a campanha inicial e crie o admin do tenant em um fluxo por etapas.
+                Preencha os dados da empresa e uma avaliação será criada automaticamente.
               </p>
             </div>
             <button
@@ -369,213 +347,39 @@ export default function ConsultorPage() {
               className="btn-primary text-xs px-4 py-2"
               onClick={() => {
                 setShowCreateForm((current) => !current);
-                setWizardStep(1);
                 setCreateError("");
               }}
             >
-              {showCreateForm ? "Fechar onboarding" : "Novo tenant"}
+              {showCreateForm ? "Cancelar" : "Nova empresa"}
             </button>
           </div>
 
           {showCreateForm && (
             <div className="mt-5">
-              <div className="mb-5 grid gap-2 sm:grid-cols-4">
-                {wizardSteps.map((step) => (
-                  <button
-                    key={step.id}
-                    type="button"
-                    onClick={() => setWizardStep(step.id)}
-                    className="rounded-2xl border px-4 py-3 text-left"
-                    style={{
-                      borderColor: wizardStep === step.id ? "rgba(46,127,163,0.35)" : "rgba(91,158,201,0.18)",
-                      background: wizardStep === step.id ? "rgba(46,127,163,0.08)" : "rgba(255,255,255,0.75)",
-                    }}
-                  >
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.14em]" style={{ color: wizardStep === step.id ? "#1e5f7a" : "#7a9aaa" }}>
-                      Etapa {step.id}
-                    </p>
-                    <p className="mt-1 text-sm font-semibold" style={{ color: "#1e3a4a" }}>{step.title}</p>
-                  </button>
-                ))}
+              <div className="grid gap-4 lg:grid-cols-2">
+                <label className="text-xs font-medium" style={{ color: "#5a7a8a" }}>
+                  Nome da empresa
+                  <input
+                    type="text"
+                    value={createForm.name}
+                    onChange={(event) => setCreateForm((current) => ({ ...current, name: event.target.value }))}
+                    className="mt-1 w-full rounded-xl border px-4 py-2 text-sm outline-none"
+                    style={{ borderColor: "rgba(91,158,201,0.25)", background: "white", color: "#1e3a4a" }}
+                    placeholder="Ex.: Clínica Horizonte"
+                  />
+                </label>
+                <label className="text-xs font-medium" style={{ color: "#5a7a8a" }}>
+                  CNPJ
+                  <input
+                    type="text"
+                    value={createForm.cnpj}
+                    onChange={(event) => setCreateForm((current) => ({ ...current, cnpj: event.target.value }))}
+                    className="mt-1 w-full rounded-xl border px-4 py-2 text-sm outline-none"
+                    style={{ borderColor: "rgba(91,158,201,0.25)", background: "white", color: "#1e3a4a" }}
+                    placeholder="00.000.000/0001-00"
+                  />
+                </label>
               </div>
-
-              {wizardStep === 1 && (
-                <div className="grid gap-4 lg:grid-cols-2">
-                  <label className="text-xs font-medium" style={{ color: "#5a7a8a" }}>
-                    Nome da empresa
-                    <input
-                      type="text"
-                      value={createForm.name}
-                      onChange={(event) => setCreateForm((current) => ({ ...current, name: event.target.value }))}
-                      className="mt-1 w-full rounded-xl border px-4 py-2 text-sm outline-none"
-                      style={{ borderColor: "rgba(91,158,201,0.25)", background: "white", color: "#1e3a4a" }}
-                      placeholder="Ex.: Clínica Horizonte"
-                    />
-                  </label>
-                  <label className="text-xs font-medium" style={{ color: "#5a7a8a" }}>
-                    CNPJ
-                    <input
-                      type="text"
-                      value={createForm.cnpj}
-                      onChange={(event) => setCreateForm((current) => ({ ...current, cnpj: event.target.value }))}
-                      className="mt-1 w-full rounded-xl border px-4 py-2 text-sm outline-none"
-                      style={{ borderColor: "rgba(91,158,201,0.25)", background: "white", color: "#1e3a4a" }}
-                      placeholder="00.000.000/0001-00"
-                    />
-                  </label>
-                  <label className="text-xs font-medium" style={{ color: "#5a7a8a" }}>
-                    Slug
-                    <input
-                      type="text"
-                      value={createForm.slug}
-                      onChange={(event) => setCreateForm((current) => ({ ...current, slug: event.target.value }))}
-                      className="mt-1 w-full rounded-xl border px-4 py-2 text-sm outline-none"
-                      style={{ borderColor: "rgba(91,158,201,0.25)", background: "white", color: "#1e3a4a" }}
-                      placeholder="Opcional. Ex.: clinica-horizonte"
-                    />
-                  </label>
-                  <label className="text-xs font-medium" style={{ color: "#5a7a8a" }}>
-                    URL da logo
-                    <input
-                      type="url"
-                      value={createForm.logoUrl}
-                      onChange={(event) => setCreateForm((current) => ({ ...current, logoUrl: event.target.value }))}
-                      className="mt-1 w-full rounded-xl border px-4 py-2 text-sm outline-none"
-                      style={{ borderColor: "rgba(91,158,201,0.25)", background: "white", color: "#1e3a4a" }}
-                      placeholder="Opcional"
-                    />
-                  </label>
-                </div>
-              )}
-
-              {wizardStep === 2 && (
-                <div className="grid gap-4 lg:grid-cols-2">
-                  <label className="flex items-center gap-3 rounded-2xl border px-4 py-3 text-sm lg:col-span-2"
-                    style={{ borderColor: "rgba(91,158,201,0.18)", background: "rgba(91,158,201,0.04)", color: "#1e3a4a" }}>
-                    <input
-                      type="checkbox"
-                      checked={createForm.createInitialCampaign}
-                      onChange={(event) => setCreateForm((current) => ({ ...current, createInitialCampaign: event.target.checked }))}
-                    />
-                    Criar campanha inicial em rascunho
-                  </label>
-                  <label className="text-xs font-medium lg:col-span-2" style={{ color: "#5a7a8a" }}>
-                    Título da campanha inicial
-                    <input
-                      type="text"
-                      value={createForm.campaignTitle}
-                      onChange={(event) => setCreateForm((current) => ({ ...current, campaignTitle: event.target.value }))}
-                      className="mt-1 w-full rounded-xl border px-4 py-2 text-sm outline-none"
-                      style={{ borderColor: "rgba(91,158,201,0.25)", background: "white", color: "#1e3a4a" }}
-                      placeholder="Ex.: Diagnóstico psicossocial 2026"
-                      disabled={!createForm.createInitialCampaign}
-                    />
-                  </label>
-                </div>
-              )}
-
-              {wizardStep === 3 && (
-                <div className="grid gap-4 lg:grid-cols-2">
-                  <label className="flex items-center gap-3 rounded-2xl border px-4 py-3 text-sm lg:col-span-2"
-                    style={{ borderColor: "rgba(91,170,109,0.18)", background: "rgba(91,170,109,0.05)", color: "#1e3a4a" }}>
-                    <input
-                      type="checkbox"
-                      checked={createForm.createInitialAdmin}
-                      onChange={(event) => setCreateForm((current) => ({ ...current, createInitialAdmin: event.target.checked }))}
-                    />
-                    Criar admin inicial da empresa
-                  </label>
-
-                  {createForm.createInitialAdmin && (
-                    <>
-                      <label className="text-xs font-medium" style={{ color: "#5a7a8a" }}>
-                        Nome do admin
-                        <input
-                          type="text"
-                          value={createForm.adminName}
-                          onChange={(event) => setCreateForm((current) => ({ ...current, adminName: event.target.value }))}
-                          className="mt-1 w-full rounded-xl border px-4 py-2 text-sm outline-none"
-                          style={{ borderColor: "rgba(91,158,201,0.25)", background: "white", color: "#1e3a4a" }}
-                          placeholder="Ex.: Paula RH"
-                        />
-                      </label>
-                      <label className="text-xs font-medium" style={{ color: "#5a7a8a" }}>
-                        E-mail do admin
-                        <input
-                          type="email"
-                          value={createForm.adminEmail}
-                          onChange={(event) => setCreateForm((current) => ({ ...current, adminEmail: event.target.value }))}
-                          className="mt-1 w-full rounded-xl border px-4 py-2 text-sm outline-none"
-                          style={{ borderColor: "rgba(91,158,201,0.25)", background: "white", color: "#1e3a4a" }}
-                          placeholder="Opcional"
-                        />
-                      </label>
-                      <label className="text-xs font-medium" style={{ color: "#5a7a8a" }}>
-                        CPF do admin
-                        <input
-                          type="text"
-                          value={createForm.adminCpf}
-                          onChange={(event) => setCreateForm((current) => ({ ...current, adminCpf: event.target.value }))}
-                          className="mt-1 w-full rounded-xl border px-4 py-2 text-sm outline-none"
-                          style={{ borderColor: "rgba(91,158,201,0.25)", background: "white", color: "#1e3a4a" }}
-                          placeholder="000.000.000-00"
-                        />
-                      </label>
-                      <label className="text-xs font-medium" style={{ color: "#5a7a8a" }}>
-                        PIN inicial
-                        <input
-                          type="text"
-                          value={createForm.adminPin}
-                          onChange={(event) => setCreateForm((current) => ({ ...current, adminPin: event.target.value }))}
-                          className="mt-1 w-full rounded-xl border px-4 py-2 text-sm outline-none"
-                          style={{ borderColor: "rgba(91,158,201,0.25)", background: "white", color: "#1e3a4a" }}
-                          placeholder="6 dígitos"
-                        />
-                      </label>
-                      <label className="text-xs font-medium" style={{ color: "#5a7a8a" }}>
-                        Setor
-                        <input
-                          type="text"
-                          value={createForm.adminSector}
-                          onChange={(event) => setCreateForm((current) => ({ ...current, adminSector: event.target.value }))}
-                          className="mt-1 w-full rounded-xl border px-4 py-2 text-sm outline-none"
-                          style={{ borderColor: "rgba(91,158,201,0.25)", background: "white", color: "#1e3a4a" }}
-                        />
-                      </label>
-                      <label className="text-xs font-medium" style={{ color: "#5a7a8a" }}>
-                        Cargo
-                        <input
-                          type="text"
-                          value={createForm.adminJobTitle}
-                          onChange={(event) => setCreateForm((current) => ({ ...current, adminJobTitle: event.target.value }))}
-                          className="mt-1 w-full rounded-xl border px-4 py-2 text-sm outline-none"
-                          style={{ borderColor: "rgba(91,158,201,0.25)", background: "white", color: "#1e3a4a" }}
-                        />
-                      </label>
-                    </>
-                  )}
-                </div>
-              )}
-
-              {wizardStep === 4 && (
-                <div className="grid gap-4 lg:grid-cols-2">
-                  <div className="rounded-2xl border p-4" style={{ borderColor: "rgba(91,158,201,0.18)", background: "rgba(91,158,201,0.04)" }}>
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.14em]" style={{ color: "#2e7fa3" }}>Empresa</p>
-                    <p className="mt-2 text-sm font-semibold" style={{ color: "#1e3a4a" }}>{createForm.name || "Sem nome"}</p>
-                    <p className="mt-1 text-xs" style={{ color: "#7a9aaa" }}>CNPJ: {createForm.cnpj || "não informado"}</p>
-                    <p className="mt-1 text-xs" style={{ color: "#7a9aaa" }}>Slug: {createForm.slug || "gerado automaticamente"}</p>
-                  </div>
-                  <div className="rounded-2xl border p-4" style={{ borderColor: "rgba(91,170,109,0.18)", background: "rgba(91,170,109,0.05)" }}>
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.14em]" style={{ color: "#3d8a50" }}>Onboarding</p>
-                    <p className="mt-2 text-sm font-semibold" style={{ color: "#1e3a4a" }}>
-                      {createForm.createInitialCampaign ? "Campanha inicial pronta" : "Sem campanha inicial"}
-                    </p>
-                    <p className="mt-1 text-xs" style={{ color: "#7a9aaa" }}>
-                      {createForm.createInitialAdmin ? `Admin: ${createForm.adminName || "a definir"}` : "Sem admin inicial"}
-                    </p>
-                  </div>
-                </div>
-              )}
 
               {createError && (
                 <div className="mt-4 rounded-2xl px-4 py-3 text-xs"
@@ -588,35 +392,18 @@ export default function ConsultorPage() {
                 <button
                   type="button"
                   className="btn-ghost text-xs px-4 py-2"
-                  onClick={() => {
-                    if (wizardStep === 1) {
-                      setShowCreateForm(false);
-                      return;
-                    }
-                    setWizardStep((current) => Math.max(1, current - 1));
-                  }}
+                  onClick={() => setShowCreateForm(false)}
                 >
-                  {wizardStep === 1 ? "Cancelar" : "← Voltar"}
+                  Cancelar
                 </button>
-
-                {wizardStep < wizardSteps.length ? (
-                  <button
-                    type="button"
-                    className="btn-primary text-xs px-4 py-2"
-                    onClick={() => setWizardStep((current) => Math.min(wizardSteps.length, current + 1))}
-                  >
-                    Próxima etapa →
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    className="btn-primary text-xs px-4 py-2"
-                    onClick={createCompany}
-                    disabled={creatingCompany}
-                  >
-                    {creatingCompany ? "Cadastrando..." : "Salvar tenant"}
-                  </button>
-                )}
+                <button
+                  type="button"
+                  className="btn-primary text-xs px-4 py-2"
+                  onClick={createCompany}
+                  disabled={creatingCompany}
+                >
+                  {creatingCompany ? "Cadastrando..." : "Cadastrar empresa"}
+                </button>
               </div>
             </div>
           )}
@@ -626,14 +413,14 @@ export default function ConsultorPage() {
       <div className="mb-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
         {[
           { label: "Empresas", value: data.totals.companies, icon: "🏢", color: "#2e7fa3" },
-          { label: "Campanhas ativas", value: data.totals.activeCampaigns, icon: "✅", color: "#5baa6d" },
+          { label: "Avaliações abertas", value: data.totals.activeCampaigns, icon: "✅", color: "#5baa6d" },
           { label: "Respostas anônimas", value: data.totals.totalResponses, icon: "📝", color: "#1e5f7a" },
           { label: "Alertas abertos", value: data.totals.unresolvedAlerts, icon: "🚨", color: "#dc2626" },
-          { label: "Onboarding pendente", value: data.totals.onboardingIncomplete, icon: "🧭", color: "#b45309" },
+          { label: "Cadastro pendente", value: data.totals.onboardingIncomplete, icon: "🧭", color: "#b45309" },
           { label: "Saúde crítica", value: data.totals.criticalHealth, icon: "🩺", color: "#dc2626" },
           { label: "Funcionários", value: data.totals.totalUsers, icon: "👥", color: "#2e7fa3" },
           { label: "Planos abertos", value: data.totals.openActionPlans, icon: "📌", color: "#f59e0b" },
-          { label: "Campanhas", value: data.totals.totalCampaigns, icon: "📋", color: "#7a9aaa" },
+          { label: "Avaliações", value: data.totals.totalCampaigns, icon: "📋", color: "#7a9aaa" },
           { label: "Escopo", value: data.viewer.role === "OWNER" ? "Global" : "Vinculado", icon: "🔐", color: "#8b5cf6" },
         ].map((item) => (
           <div key={item.label} className="card-3d-sm p-5">
@@ -648,9 +435,9 @@ export default function ConsultorPage() {
         <div className="card-3d-sm p-6">
           <div className="mb-4 flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
             <div>
-              <h2 className="text-sm font-semibold" style={{ color: "#1e3a4a" }}>Carteira de clientes</h2>
+              <h2 className="text-sm font-semibold" style={{ color: "#1e3a4a" }}>Empresas</h2>
               <p className="mt-1 text-xs" style={{ color: "#7a9aaa" }}>
-                Busque, filtre e priorize tenants por risco, onboarding, integração, atividade e volume de respostas.
+                Busque e filtre empresas por risco, atividade e volume de respostas.
               </p>
             </div>
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
@@ -672,14 +459,14 @@ export default function ConsultorPage() {
                 <option value="RESPONSES">Ordenar: Mais respostas</option>
                 <option value="RECENT_ACTIVITY">Ordenar: Atividade recente</option>
                 <option value="RISK">Ordenar: Maior risco</option>
-                <option value="ONBOARDING">Ordenar: Onboarding pendente</option>
+                <option value="ONBOARDING">Ordenar: Cadastro pendente</option>
               </select>
             </div>
           </div>
 
           <div className="mb-5 grid gap-3 md:grid-cols-2 xl:grid-cols-5">
             <select value={campaignStatusFilter} onChange={(event) => setCampaignStatusFilter(event.target.value)} className="rounded-xl border px-4 py-2 text-sm outline-none" style={{ borderColor: "rgba(91,158,201,0.18)", background: "white", color: "#1e3a4a" }}>
-              <option value="ALL">Status da campanha</option>
+              <option value="ALL">Status da avaliação</option>
               <option value="DRAFT">Rascunho</option>
               <option value="ACTIVE">Ativa</option>
               <option value="CLOSED">Encerrada</option>
@@ -703,9 +490,9 @@ export default function ConsultorPage() {
               <option value="NO">Sem integração</option>
             </select>
             <select value={activeCampaignFilter} onChange={(event) => setActiveCampaignFilter(event.target.value as BinaryFilter)} className="rounded-xl border px-4 py-2 text-sm outline-none" style={{ borderColor: "rgba(91,158,201,0.18)", background: "white", color: "#1e3a4a" }}>
-              <option value="ALL">Campanha ativa</option>
-              <option value="YES">Com campanha ativa</option>
-              <option value="NO">Sem campanha ativa</option>
+              <option value="ALL">Avaliação aberta</option>
+              <option value="YES">Com avaliação aberta</option>
+              <option value="NO">Sem avaliação aberta</option>
             </select>
             <select value={responseRangeFilter} onChange={(event) => setResponseRangeFilter(event.target.value as ResponseRangeFilter)} className="rounded-xl border px-4 py-2 text-sm outline-none" style={{ borderColor: "rgba(91,158,201,0.18)", background: "white", color: "#1e3a4a" }}>
               <option value="ALL">Faixa de respostas</option>
@@ -738,7 +525,7 @@ export default function ConsultorPage() {
                 checked={onlyIncompleteOnboarding}
                 onChange={(event) => setOnlyIncompleteOnboarding(event.target.checked)}
               />
-              Só onboarding incompleto
+              Só cadastro incompleto
             </label>
           </div>
 
@@ -764,7 +551,7 @@ export default function ConsultorPage() {
               Limpar filtros
             </button>
             <span className="rounded-full px-3 py-2 text-xs" style={{ background: "rgba(46,127,163,0.08)", color: "#1e5f7a" }}>
-              {filteredCompanies.length} tenant(s) na visão atual
+              {filteredCompanies.length} empresa(s) na visão atual
             </span>
           </div>
 
@@ -839,10 +626,10 @@ export default function ConsultorPage() {
                         <div className="flex items-center justify-between gap-3">
                           <div>
                             <p className="text-xs font-semibold uppercase tracking-[0.12em]" style={{ color: "#2e7fa3" }}>
-                              Status de onboarding
+                              Progresso
                             </p>
                             <p className="mt-1 text-xs" style={{ color: "#7a9aaa" }}>
-                              {company.onboarding.completedSteps}/{company.onboarding.totalSteps} marcos concluídos
+                              {company.onboarding.completedSteps}/{company.onboarding.totalSteps} etapas concluídas
                             </p>
                           </div>
                           <span className="text-sm font-semibold" style={{ color: "#1e3a4a" }}>
@@ -893,7 +680,7 @@ export default function ConsultorPage() {
                         href={`/consultor/empresas/${company.id}${company.lastCampaign ? `?campaign=${company.lastCampaign.id}` : ""}`}
                         className="btn-primary text-xs px-3 py-2"
                       >
-                        Abrir tenant
+                        Ver resultados
                       </Link>
                       <Link href={`/consultor/empresas/${company.id}/gestao`} className="btn-ghost text-xs px-3 py-2">
                         ⚙ Gestão
@@ -915,7 +702,7 @@ export default function ConsultorPage() {
 
             {filteredCompanies.length === 0 && (
               <div className="rounded-2xl border border-dashed px-4 py-10 text-center text-sm" style={{ borderColor: "rgba(91,158,201,0.2)", color: "#7a9aaa" }}>
-                Nenhum tenant encontrado com os filtros atuais.
+                Nenhuma empresa encontrada com os filtros atuais.
               </div>
             )}
           </div>
@@ -923,24 +710,24 @@ export default function ConsultorPage() {
 
         <div className="space-y-6">
           <div className="card-3d-sm p-6">
-            <h2 className="text-sm font-semibold" style={{ color: "#1e3a4a" }}>Prioridades operacionais</h2>
+            <h2 className="text-sm font-semibold" style={{ color: "#1e3a4a" }}>Atenção necessária</h2>
             <div className="mt-4 space-y-3 text-sm">
               <div className="rounded-2xl p-4" style={{ background: "rgba(220,38,38,0.05)", border: "1px solid rgba(220,38,38,0.12)" }}>
                 <p className="font-semibold" style={{ color: "#dc2626" }}>Saúde crítica</p>
                 <p className="mt-1 text-xs" style={{ color: "#7a9aaa" }}>
-                  {data.totals.criticalHealth} tenant(s) estão em faixa crítica por risco consolidado ou alertas abertos.
+                  {data.totals.criticalHealth} empresa(s) estão em faixa crítica por risco consolidado ou alertas abertos.
                 </p>
               </div>
               <div className="rounded-2xl p-4" style={{ background: "rgba(245,158,11,0.07)", border: "1px solid rgba(245,158,11,0.14)" }}>
-                <p className="font-semibold" style={{ color: "#b45309" }}>Onboarding incompleto</p>
+                <p className="font-semibold" style={{ color: "#b45309" }}>Cadastro incompleto</p>
                 <p className="mt-1 text-xs" style={{ color: "#7a9aaa" }}>
-                  {data.totals.onboardingIncomplete} tenant(s) ainda não concluíram empresa, admin, campanha, integração e primeira resposta.
+                  {data.totals.onboardingIncomplete} empresa(s) ainda não concluíram o cadastro completo.
                 </p>
               </div>
               <div className="rounded-2xl p-4" style={{ background: "rgba(91,170,109,0.08)", border: "1px solid rgba(91,170,109,0.16)" }}>
-                <p className="font-semibold" style={{ color: "#3d8a50" }}>Campanhas ativas</p>
+                <p className="font-semibold" style={{ color: "#3d8a50" }}>Avaliações abertas</p>
                 <p className="mt-1 text-xs" style={{ color: "#7a9aaa" }}>
-                  {data.totals.activeCampaigns} campanha(s) em execução no momento.
+                  {data.totals.activeCampaigns} avaliação(ões) em andamento no momento.
                 </p>
               </div>
             </div>
@@ -949,9 +736,9 @@ export default function ConsultorPage() {
           <div className="card-3d-sm p-6">
             <h2 className="text-sm font-semibold" style={{ color: "#1e3a4a" }}>Escopo e governança</h2>
             <div className="mt-4 space-y-3 text-xs" style={{ color: "#5a7a8a" }}>
-              <p><strong>OWNER</strong>: visão global, cadastro e gestão de tenants, vínculos e campanhas-template.</p>
-              <p><strong>CONSULTANT</strong>: opera apenas os tenants vinculados e seus fluxos de onboarding.</p>
-              <p><strong>ANALYST</strong>: leitura analítica, sem mutação em tenant, integração ou vínculos.</p>
+              <p><strong>OWNER</strong>: visão global, cadastro e gestão de empresas, vínculos e avaliações.</p>
+              <p><strong>CONSULTANT</strong>: opera apenas as empresas vinculadas e seus fluxos.</p>
+              <p><strong>ANALYST</strong>: leitura analítica, sem alterações em empresa, integração ou vínculos.</p>
             </div>
           </div>
         </div>

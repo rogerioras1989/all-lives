@@ -36,11 +36,11 @@ const ACTION_LABEL: Record<string, string> = {
   ALERT_ACKNOWLEDGE: "Alerta reconhecido",
   ALERT_RESOLVE: "Alerta resolvido",
   ALERT_ASSIGN: "Alerta atribuído",
-  CAMPAIGN_CREATED: "Campanha criada",
-  CAMPAIGN_UPDATED: "Campanha atualizada",
-  CAMPAIGN_CLONED: "Campanha duplicada por template",
-  TENANT_CREATED: "Tenant criado",
-  TENANT_UPDATED: "Tenant atualizado",
+  CAMPAIGN_CREATED: "Avaliação criada",
+  CAMPAIGN_UPDATED: "Avaliação atualizada",
+  CAMPAIGN_CLONED: "Avaliação duplicada",
+  TENANT_CREATED: "Empresa criada",
+  TENANT_UPDATED: "Empresa atualizada",
   CONSULTANT_LINK_CREATED: "Vínculo All Lives criado",
   CONSULTANT_LINK_UPDATED: "Vínculo All Lives atualizado",
   CONSULTANT_LINK_REMOVED: "Vínculo All Lives removido",
@@ -103,7 +103,7 @@ export default function AuditoriaPage() {
           <div>
             <p className="text-sm font-semibold" style={{ color: "#1e5f7a" }}>Conformidade NR-01</p>
             <p className="text-xs mt-1 leading-relaxed" style={{ color: "#5a7a8a" }}>
-              Esta trilha registra todas as ações realizadas na plataforma: criação de campanhas, planos de ação, reconhecimento e resolução de alertas.
+              Esta trilha registra todas as ações realizadas na plataforma: criação de avaliações, planos de ação, reconhecimento e resolução de alertas.
               Serve como evidência auditável para fiscalizações trabalhistas relacionadas à Norma Regulamentadora 01.
             </p>
           </div>

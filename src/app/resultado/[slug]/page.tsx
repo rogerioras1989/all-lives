@@ -18,7 +18,13 @@ function getRisk(score: number) {
 }
 
 type ResultData = {
-  campaign: { title: string; status: string; company: { name: string }; startDate?: string; endDate?: string };
+  campaign: { 
+    title: string; 
+    status: string; 
+    company: { name: string; helpUrl?: string | null }; 
+    startDate?: string; 
+    endDate?: string 
+  };
   totalResponses: number;
   overallAverage: number;
   topicAverages: { topicId: number; topicName: string; averageScore: number }[];
@@ -59,7 +65,7 @@ export default function PublicResultPage() {
         <div className="card-3d p-12 text-center max-w-md">
           <div className="text-5xl mb-4">🔒</div>
           <h2 className="text-xl font-bold mb-2" style={{ color: "#1e3a4a" }}>Resultados não disponíveis</h2>
-          <p className="text-sm mb-6" style={{ color: "#7a9aaa" }}>{error || "Esta campanha não está disponível para visualização pública."}</p>
+          <p className="text-sm mb-6" style={{ color: "#7a9aaa" }}>{error || "Esta avaliação não está disponível para visualização pública."}</p>
           <Link href="/" className="btn-primary inline-block">← Voltar ao início</Link>
         </div>
       </main>
@@ -74,6 +80,7 @@ export default function PublicResultPage() {
   }));
 
   const overallRisk = getRisk(data.overallAverage);
+  const isCritical = overallRisk === "HIGH" || overallRisk === "CRITICAL";
 
   return (
     <main className="min-h-screen gradient-hero pb-16">
@@ -90,6 +97,26 @@ export default function PublicResultPage() {
       </header>
 
       <div className="max-w-5xl mx-auto px-6 pt-8">
+        {/* Help Banner if Critical */}
+        {isCritical && (
+          <div className="mb-8 p-6 rounded-2xl border-2 border-red-500/20 bg-red-50/50 backdrop-blur-sm flex flex-col md:flex-row items-center justify-between gap-6 fade-up">
+            <div className="flex items-center gap-4">
+              <div className="text-4xl">🆘</div>
+              <div>
+                <h3 className="text-lg font-bold text-red-700">Apoio emergencial disponível</h3>
+                <p className="text-sm text-red-600/80">Identificamos um nível de risco elevado. Você não está sozinho(a).</p>
+              </div>
+            </div>
+            <a 
+              href={data.campaign.company.helpUrl || "https://cvv.org.br/"} 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="px-8 py-3 bg-red-600 hover:bg-red-700 text-white rounded-xl font-bold transition-all transform hover:scale-105 active:scale-95 shadow-lg shadow-red-200"
+            >
+              Precisa de ajuda agora?
+            </a>
+          </div>
+        )}
         {/* Campaign info */}
         <div className="mb-8 fade-up">
           <p className="text-xs font-semibold uppercase tracking-widest mb-1" style={{ color: "#7a9aaa" }}>
