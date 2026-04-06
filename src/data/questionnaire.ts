@@ -7,16 +7,15 @@ export const SCALE_LABELS = {
 } as const;
 
 export const SECTORS = [
-  "Produção",
   "Administrativo",
-  "Recursos Humanos",
+  "RH",
   "Comercial",
-  "ETC",
 ];
 
 export interface Question {
   id: number;
   text: string;
+  hint?: string;
   reversed?: boolean; // se true, pontuação invertida (maior valor = menor risco)
 }
 
@@ -30,494 +29,376 @@ export interface Topic {
 export const TOPICS: Topic[] = [
   {
     id: 1,
-    title: "Assédio",
+    title: "Assédio de Qualquer Natureza",
     description:
-      "Avalia a severidade, gravidade e probabilidade de ocorrência do risco de assédio.",
+      "Este tópico visa verificar se o colaborador vivencia ou presencia situações de assédio moral, sexual ou qualquer conduta desrespeitosa no ambiente de trabalho.",
     questions: [
       {
         id: 1,
         text: "Você já presenciou ou sofreu comentários ofensivos, piadas ou insinuações inadequadas no ambiente de trabalho?",
+        hint: "Responda pensando se já presenciou ou sofreu esse tipo de situação no trabalho.",
       },
       {
         id: 2,
         text: "Você se sente à vontade para relatar situações de assédio moral ou sexual na empresa sem medo de represálias?",
+        hint: "Responda se você se sente seguro(a) para relatar situações de assédio na empresa.",
         reversed: true,
       },
       {
         id: 3,
         text: "Existe um canal seguro e sigiloso para denunciar assédio na empresa?",
+        hint: "Responda se a empresa oferece um meio seguro para denunciar assédio e outras situações.",
         reversed: true,
       },
       {
         id: 4,
-        text: "Você já recebeu tratamento desrespeitoso ou humilhante de colegas ou superiores?",
+        text: "Há casos conhecidos de assédio moral ou sexual que não foram devidamente investigados ou punidos?",
+        hint: "Responda se você percebe que situações de assédio não são tratadas corretamente.",
       },
       {
         id: 5,
-        text: "Você sente que há favoritismo ou perseguição por parte da liderança?",
-      },
-      {
-        id: 6,
-        text: "Há casos conhecidos de assédio moral ou sexual que não foram devidamente investigados ou punidos?",
-      },
-      {
-        id: 7,
-        text: "A empresa realiza treinamentos ou campanhas de conscientização sobre assédio?",
-        reversed: true,
-      },
-      {
-        id: 8,
         text: "O RH e os gestores demonstram comprometimento real com a prevenção do assédio?",
         reversed: true,
-      },
-      {
-        id: 9,
-        text: "Você já foi forçado(a) a realizar tarefas humilhantes ou degradantes?",
-      },
-      {
-        id: 10,
-        text: "Existe uma cultura de 'brincadeiras' que desrespeitam funcionários? Já foi vítima de alguma delas?",
       },
     ],
   },
   {
     id: 2,
-    title: "Carga Excessiva de Trabalho",
+    title: "Suporte e Apoio no Ambiente de Trabalho",
     description:
-      "Avalia a severidade, gravidade e probabilidade de ocorrência do risco de exaustão por carga excessiva de trabalho.",
+      "Este tópico visa verificar se o colaborador percebe apoio suficiente da liderança e dos colegas para realizar suas atividades.",
     questions: [
       {
         id: 1,
-        text: "Você sente que sua carga de trabalho diária é superior à sua capacidade de execução dentro do horário normal?",
+        text: "Você sente que pode contar com seus colegas em momentos de dificuldade?",
+        hint: "Responda se você sente que pode contar com seus colegas quando precisa.",
+        reversed: true,
       },
       {
         id: 2,
-        text: "Você frequentemente precisa fazer horas extras ou levar trabalho para casa?",
+        text: "Existe apoio da liderança para lidar com desafios relacionados ao trabalho?",
+        hint: "Responda se seus gestores ajudam quando surgem dificuldades no trabalho.",
+        reversed: true,
       },
       {
         id: 3,
-        text: "As demandas e prazos estabelecidos são realistas e atingíveis?",
+        text: "O RH está presente e atuante quando surgem conflitos ou dificuldades no trabalho?",
+        hint: "Responda se o RH costuma apoiar quando há conflitos ou problemas.",
         reversed: true,
       },
       {
         id: 4,
-        text: "Você sente que a empresa respeita seus limites físicos e mentais?",
+        text: "Os gestores promovem um ambiente saudável e respeitoso?",
+        hint: "Responda como você avalia o comportamento dos gestores no dia a dia.",
         reversed: true,
       },
       {
         id: 5,
-        text: "Você recebe pausas adequadas ao longo do dia?",
-        reversed: true,
-      },
-      {
-        id: 6,
-        text: "Existe um equilíbrio entre tarefas administrativas e operacionais?",
-        reversed: true,
-      },
-      {
-        id: 7,
-        text: "Há redistribuição de tarefas quando há sobrecarga em algum setor ou equipe?",
-        reversed: true,
-      },
-      {
-        id: 8,
-        text: "Você já teve sintomas físicos ou emocionais (como ansiedade, exaustão, insônia) devido ao excesso de trabalho?",
-      },
-      {
-        id: 9,
-        text: "Existe flexibilidade para gerenciar sua própria carga de trabalho?",
-        reversed: true,
-      },
-      {
-        id: 10,
-        text: "A equipe é dimensionada (quantidade necessária de funcionários por função) corretamente para a demanda da empresa?",
+        text: "Você sente que pode expressar suas dificuldades no trabalho sem ser julgado(a)?",
+        hint: "Responda se você se sente à vontade para falar sobre dificuldades no trabalho.",
         reversed: true,
       },
     ],
   },
   {
     id: 3,
-    title: "Reconhecimento e Recompensas",
+    title: "Má Gestão de Mudanças Organizacionais",
     description:
-      "Avalia a severidade, gravidade e probabilidade de ocorrência do risco de desmotivação e tristeza pela falta de reconhecimento e recompensas.",
+      "Este tópico irá verificar como as mudanças na empresa são comunicadas e conduzidas, e se geram insegurança ou dificuldades para os colaboradores.",
     questions: [
       {
         id: 1,
-        text: "Você sente que seu esforço e desempenho são reconhecidos pela liderança?",
-        reversed: true,
+        text: "Mudanças organizacionais impactaram negativamente seu sentimento de segurança no trabalho?",
+        hint: "Responda se mudanças na empresa afetaram sua sensação de segurança no trabalho.",
       },
       {
         id: 2,
-        text: "A empresa possui políticas claras de promoção e progressão de carreira?",
+        text: "Há comunicação clara sobre mudanças que afetam a empresa ou os trabalhadores?",
+        hint: "Responda se a empresa costuma explicar bem as mudanças que acontecem.",
         reversed: true,
       },
       {
         id: 3,
-        text: "As avaliações de desempenho são justas e transparentes?",
-        reversed: true,
+        text: "Você já sentiu que seu emprego estava ameaçado sem explicações claras durante períodos de mudança?",
+        hint: "Responda se já sentiu insegurança sobre seu emprego durante mudanças.",
       },
       {
         id: 4,
-        text: "Você sente que há igualdade no reconhecimento entre diferentes áreas ou equipes?",
-        reversed: true,
-      },
-      {
-        id: 5,
-        text: "A empresa oferece incentivos financeiros ou não financeiros pelo bom desempenho?",
-        reversed: true,
-      },
-      {
-        id: 6,
-        text: "Você recebe feedback construtivo regularmente?",
-        reversed: true,
-      },
-      {
-        id: 7,
-        text: "Existe uma cultura de valorização dos funcionários?",
-        reversed: true,
-      },
-      {
-        id: 8,
-        text: "Você já se sentiu desmotivado(a) por falta de reconhecimento?",
-      },
-      {
-        id: 9,
-        text: "A empresa celebra conquistas individuais e coletivas?",
-        reversed: true,
-      },
-      {
-        id: 10,
-        text: "O plano de benefícios da empresa é condizente com suas necessidades e expectativas?",
+        text: "Existe transparência na comunicação da empresa durante processos de mudança?",
+        hint: "Responda se as mudanças são comunicadas de forma clara e aberta.",
         reversed: true,
       },
     ],
   },
   {
     id: 4,
-    title: "Clima Organizacional",
+    title: "Baixa Clareza de Papel ou Função",
     description:
-      "Avalia as características do clima organizacional que contribuem para o bem-estar emocional dos colaboradores.",
+      "Este tópico visa verificar se o colaborador entende claramente suas responsabilidades, metas e o que é esperado do seu trabalho.",
     questions: [
       {
         id: 1,
-        text: "O ambiente de trabalho é amigável e colaborativo?",
+        text: "Você recebe instruções claras sobre suas responsabilidades no trabalho?",
+        hint: "Responda se você entende bem quais são suas responsabilidades.",
         reversed: true,
       },
       {
         id: 2,
-        text: "Existe um sentimento de confiança entre os colegas de trabalho?",
+        text: "A comunicação da empresa ajuda você a entender o que é esperado do seu trabalho?",
+        hint: "Responda se a empresa deixa claro o que espera do seu trabalho.",
         reversed: true,
       },
       {
         id: 3,
-        text: "Você se sente confortável para expressar suas opiniões na equipe?",
+        text: "A comunicação entre equipes e setores contribui para a clareza das suas tarefas?",
+        hint: "Responda se a comunicação entre áreas ajuda no seu trabalho.",
         reversed: true,
       },
       {
         id: 4,
-        text: "Os gestores promovem um ambiente saudável e respeitoso?",
-        reversed: true,
-      },
-      {
-        id: 5,
-        text: "Existe transparência na comunicação da empresa?",
-        reversed: true,
-      },
-      {
-        id: 6,
-        text: "Você sente que pode contar com seus colegas em momentos de dificuldade?",
-        reversed: true,
-      },
-      {
-        id: 7,
-        text: "Há um senso de propósito e pertencimento entre os funcionários?",
-        reversed: true,
-      },
-      {
-        id: 8,
-        text: "Conflitos são resolvidos de forma justa e eficiente?",
-        reversed: true,
-      },
-      {
-        id: 9,
-        text: "O ambiente físico do local de trabalho é confortável e seguro?",
-        reversed: true,
-      },
-      {
-        id: 10,
-        text: "A cultura organizacional da empresa está alinhada com seus valores pessoais?",
+        text: "Você se sente confortável para pedir esclarecimentos quando não entende suas funções ou prioridades?",
+        hint: "Responda se você se sente à vontade para perguntar quando não entende algo.",
         reversed: true,
       },
     ],
   },
   {
     id: 5,
-    title: "Autonomia e Controle sobre o Trabalho",
+    title: "Baixas Recompensas e Reconhecimento",
     description:
-      "Avalia as características dos processos de trabalho, a fim de averiguar o nível de conforto e liberdade dos colaboradores ao desempenhar suas atividades.",
+      "Este tópico irá verificar se o colaborador se sente valorizado e reconhecido pelo trabalho que realiza.",
     questions: [
       {
         id: 1,
-        text: "Você tem liberdade para tomar decisões sobre suas tarefas diárias?",
+        text: "Você sente que seu esforço e desempenho são reconhecidos pela liderança?",
+        hint: "Responda se você se sente valorizado(a) pelo trabalho que realiza.",
         reversed: true,
       },
       {
         id: 2,
-        text: "Seu trabalho permite flexibilidade para adaptar sua rotina conforme necessário?",
+        text: "Você recebe feedback construtivo sobre o seu trabalho com regularidade?",
+        hint: "Responda se você recebe orientações ou retornos sobre seu trabalho.",
         reversed: true,
       },
       {
         id: 3,
-        text: "Você sente que tem voz ativa na empresa?",
-        reversed: true,
-      },
-      {
-        id: 4,
-        text: "A empresa confia em sua capacidade de autogestão?",
-        reversed: true,
-      },
-      {
-        id: 5,
-        text: "Você recebe instruções claras sobre suas responsabilidades?",
-        reversed: true,
-      },
-      {
-        id: 6,
-        text: "O excesso de controle ou burocracia interfere no seu desempenho?",
-      },
-      {
-        id: 7,
-        text: "Suas sugestões são ouvidas e consideradas pela liderança?",
-        reversed: true,
-      },
-      {
-        id: 8,
-        text: "Você tem acesso às ferramentas e recursos necessários para desempenhar bem seu trabalho?",
-        reversed: true,
-      },
-      {
-        id: 9,
-        text: "Você sente que pode propor melhorias sem medo de represálias?",
-        reversed: true,
-      },
-      {
-        id: 10,
-        text: "O excesso de supervisão impacta sua produtividade ou bem-estar?",
+        text: "Com que frequência você já se sentiu desmotivado(a) por falta de reconhecimento no trabalho?",
+        hint: "Responda se a falta de reconhecimento já te deixou desmotivado(a).",
       },
     ],
   },
   {
     id: 6,
-    title: "Pressão e Metas",
+    title: "Baixo Controle no Trabalho / Falta de Autonomia",
     description:
-      "Avalia como as metas de trabalho afetam a saúde mental dos colaboradores.",
+      "Este tópico visa verificar o quanto o colaborador tem autonomia para organizar suas tarefas e tomar decisões no dia a dia.",
     questions: [
       {
         id: 1,
-        text: "As metas da empresa são realistas e atingíveis?",
+        text: "Você tem liberdade para tomar decisões sobre como executar suas tarefas diárias?",
+        hint: "Responda se você pode sugerir melhorias ou decidir como fazer suas tarefas.",
         reversed: true,
       },
       {
         id: 2,
-        text: "Você sente que há pressão excessiva para alcançar resultados?",
+        text: "A empresa confia na sua capacidade de organizar e gerenciar o próprio trabalho?",
+        hint: "Responda se sente que a empresa confia na forma como você organiza seu trabalho.",
+        reversed: true,
       },
       {
         id: 3,
-        text: "A cobrança por metas impacta sua saúde mental ou emocional?",
+        text: "Existe excesso de controle ou burocracia que interfere no seu desempenho?",
+        hint: "Responda se regras ou controles atrapalham seu desempenho.",
       },
       {
         id: 4,
-        text: "Existe apoio da liderança para lidar com desafios relacionados às metas?",
-        reversed: true,
-      },
-      {
-        id: 5,
-        text: "Você sente que pode negociar prazos ou objetivos quando necessário?",
-        reversed: true,
-      },
-      {
-        id: 6,
-        text: "A competitividade entre os funcionários é estimulada de maneira saudável?",
-        reversed: true,
-      },
-      {
-        id: 7,
-        text: "Você já sentiu medo de punição por não atingir metas?",
-      },
-      {
-        id: 8,
-        text: "O sistema de avaliação de metas é transparente?",
-        reversed: true,
-      },
-      {
-        id: 9,
-        text: "Você tem tempo suficiente para cumprir suas demandas com qualidade?",
-        reversed: true,
-      },
-      {
-        id: 10,
-        text: "A pressão por resultados impacta negativamente o ambiente de trabalho?",
+        text: "Existe excesso de supervisão que impacta negativamente na sua produtividade ou bem-estar?",
       },
     ],
   },
   {
     id: 7,
-    title: "Insegurança e Ameaças",
+    title: "Baixa Justiça Organizacional",
     description:
-      "Avalia o nível de sentimento de insegurança e a presença de fatores ameaçadores à estabilidade emocional dos colaboradores.",
+      "Este tópico irá verificar se o colaborador percebe que as decisões da empresa são justas e aplicadas de forma equilibrada a todos.",
     questions: [
       {
         id: 1,
-        text: "Você já sentiu que seu emprego está ameaçado sem justificativa clara?",
+        text: "Você acha justas e claras as formas que a empresa usa para avaliar o seu trabalho?",
+        hint: "Responda se as formas de avaliar seu trabalho são claras e justas.",
+        reversed: true,
       },
       {
         id: 2,
-        text: "A empresa faz cortes ou demissões repentinas sem aviso prévio?",
+        text: "Você sente que há igualdade no reconhecimento entre diferentes áreas ou equipes?",
+        hint: "Responda se você percebe tratamento justo entre equipes ou setores.",
+        reversed: true,
       },
       {
         id: 3,
-        text: "Há comunicação clara sobre a estabilidade da empresa e dos empregos?",
+        text: "Você sente que há transparência nas decisões de desligamento na empresa?",
+        hint: "Responda se a empresa é clara quando ocorrem desligamentos.",
         reversed: true,
       },
       {
         id: 4,
-        text: "Você já sofreu ameaças veladas ou diretas no ambiente de trabalho?",
-      },
-      {
-        id: 5,
-        text: "Você sente que há transparência nas políticas de desligamento?",
-        reversed: true,
-      },
-      {
-        id: 6,
-        text: "Mudanças organizacionais impactaram seu sentimento de segurança no trabalho?",
-      },
-      {
-        id: 7,
-        text: "Você já presenciou casos de demissões injustas?",
-      },
-      {
-        id: 8,
-        text: "O medo da demissão afeta seu desempenho?",
-      },
-      {
-        id: 9,
-        text: "A empresa oferece suporte psicológico para funcionários inseguros?",
-        reversed: true,
-      },
-      {
-        id: 10,
-        text: "Você já evitou expressar sua opinião por medo de represálias?",
+        text: "Você já presenciou casos de demissões que considerasse injustas?",
+        hint: "Responda se já presenciou demissões que considerou injustas.",
       },
     ],
   },
   {
     id: 8,
-    title: "Conflitos Interpessoais e Falta de Comunicação",
+    title: "Eventos Violentos ou Traumáticos",
     description:
-      "Identifica a presença e severidade de possíveis conflitos no ambiente de trabalho e prejuízos devido à falta de comunicação.",
+      "Este tópico visa verificar se o colaborador já foi exposto a situações de violência, ameaças ou eventos marcantes que possam ter causado impacto emocional.",
     questions: [
       {
         id: 1,
-        text: "Conflitos internos são resolvidos de maneira justa?",
-        reversed: true,
+        text: "Você já vivenciou ou presenciou alguma situação de violência grave no trabalho (como agressão física, ameaça séria ou ataque verbal intenso)?",
       },
       {
         id: 2,
-        text: "A comunicação entre equipes e departamentos é eficiente?",
-        reversed: true,
+        text: "Você já passou por algum evento grave no trabalho (como acidente sério, situação de risco extremo ou episódio muito impactante)?",
+        hint: "Responda se já passou por situações muito graves ou perigosas no trabalho.",
       },
       {
         id: 3,
-        text: "Você já evitou colegas ou superiores devido a desentendimentos?",
-      },
-      {
-        id: 4,
-        text: "Existe um canal aberto para feedback entre colaboradores e liderança?",
-        reversed: true,
-      },
-      {
-        id: 5,
-        text: "A falta de comunicação já comprometeu seu trabalho?",
-      },
-      {
-        id: 6,
-        text: "Você sente que há rivalidade desnecessária entre setores?",
-      },
-      {
-        id: 7,
-        text: "Há treinamentos sobre comunicação assertiva e gestão de conflitos?",
-        reversed: true,
-      },
-      {
-        id: 8,
-        text: "Você sente que pode expressar suas dificuldades sem ser julgado?",
-        reversed: true,
-      },
-      {
-        id: 9,
-        text: "A empresa promove um ambiente de diálogo aberto?",
-        reversed: true,
-      },
-      {
-        id: 10,
-        text: "O RH está presente e atuante na mediação de conflitos?",
-        reversed: true,
+        text: "Alguma situação vivida no trabalho já foi tão marcante que deixou medo, choque ou forte abalo emocional?",
+        hint: "Responda se alguma situação no trabalho já te causou forte abalo emocional.",
       },
     ],
   },
   {
     id: 9,
-    title: "Alinhamento entre Vida Pessoal e Profissional",
+    title: "Baixa Demanda no Trabalho (Subcarga)",
     description:
-      "Avalia o nível de atendimento da conciliação entre vida pessoal e profissional dos trabalhadores, mediante as condições de trabalho impostas.",
+      "Este tópico irá verificar se o colaborador percebe falta de atividades, desafios ou tarefas suficientes no trabalho.",
     questions: [
       {
         id: 1,
-        text: "Você sente que a sua jornada de trabalho permite equilíbrio com sua vida pessoal?",
-        reversed: true,
+        text: "Você sente que, na maior parte do tempo, tem pouco trabalho a realizar durante sua jornada?",
+        hint: "Responda se costuma ter pouco trabalho durante sua jornada.",
       },
       {
         id: 2,
-        text: "Você sente que tem tempo para sua família e lazer?",
-        reversed: true,
+        text: "Você costuma ficar com tempo ocioso no trabalho por falta de tarefas ou demandas claras?",
+        hint: "Responda se frequentemente fica sem tarefas para realizar.",
       },
       {
         id: 3,
-        text: "O trabalho impacta negativamente sua saúde mental?",
+        text: "Você sente que suas habilidades ou conhecimentos são pouco utilizados no seu trabalho?",
+        hint: "Responda se sente que suas habilidades são pouco aproveitadas.",
       },
       {
         id: 4,
-        text: "Você tem flexibilidade para lidar com questões pessoais urgentes?",
+        text: "Seu trabalho costuma ser pouco desafiador ou repetitivo a ponto de gerar desânimo?",
+        hint: "Responda se o trabalho é repetitivo ou desmotivador.",
+      },
+    ],
+  },
+  {
+    id: 10,
+    title: "Excesso de Demandas no Trabalho (Sobrecarga)",
+    description:
+      "Este tópico visa verificar se o volume e a pressão das tarefas estão acima do que o colaborador consegue realizar de forma saudável.",
+    questions: [
+      {
+        id: 1,
+        text: "Você sente que sua carga de trabalho diária é maior do que consegue realizar dentro do horário normal?",
+        hint: "Responda se a quantidade de trabalho é maior do que consegue realizar.",
+      },
+      {
+        id: 2,
+        text: "Você frequentemente precisa fazer horas extras ou levar trabalho para casa?",
+        hint: "Responda se costuma trabalhar além do horário normal.",
+      },
+      {
+        id: 3,
+        text: "Você já teve sintomas físicos ou emocionais (como exaustão, ansiedade ou insônia) devido ao excesso de trabalho?",
+        hint: "Responda se o excesso de trabalho já afetou sua saúde.",
+      },
+      {
+        id: 4,
+        text: "A equipe é dimensionada corretamente para a demanda de trabalho existente?",
+        hint: "Responda se a quantidade de pessoas é suficiente para a demanda.",
         reversed: true,
       },
+    ],
+  },
+  {
+    id: 11,
+    title: "Maus Relacionamentos no Local de Trabalho",
+    description:
+      "Este tópico irá verificar se existem conflitos frequentes, clima negativo ou dificuldades nos relacionamentos profissionais.",
+    questions: [
       {
-        id: 5,
-        text: "A empresa oferece suporte para equilíbrio entre trabalho e vida pessoal?",
+        id: 1,
+        text: "Você já evitou colegas ou superiores por causa de desentendimentos frequentes?",
+        hint: "Responda se já evitou colegas ou superiores por conflitos.",
+      },
+      {
+        id: 2,
+        text: "Você percebe rivalidade excessiva ou desnecessária entre colegas ou setores?",
+        hint: "Responda se percebe disputas desnecessárias no trabalho.",
+      },
+      {
+        id: 3,
+        text: "Conflitos no trabalho costumam ser resolvidos de forma justa?",
+        hint: "Responda se os conflitos costumam ser resolvidos de forma justa.",
         reversed: true,
       },
+    ],
+  },
+  {
+    id: 12,
+    title: "Trabalho em Condições de Difícil Comunicação",
+    description:
+      "Este tópico visa verificar se existem barreiras que dificultam a comunicação clara entre equipe e liderança.",
+    questions: [
       {
-        id: 6,
-        text: "Você consegue se desconectar do trabalho fora do expediente?",
+        id: 1,
+        text: "Você trabalha em condições (como turnos diferentes, trabalho externo ou distância física) que dificultam a comunicação no trabalho?",
+        hint: "Responda se seu trabalho dificulta a comunicação com colegas ou líderes.",
+      },
+      {
+        id: 2,
+        text: "A distância física entre você e sua equipe ou liderança dificulta a troca de informações?",
+        hint: "Responda se a distância atrapalha a troca de informações.",
+      },
+      {
+        id: 3,
+        text: "Você já teve dificuldade para receber informações importantes no momento certo por causa da organização do trabalho?",
+        hint: "Responda se já recebeu informações importantes com atraso.",
+      },
+      {
+        id: 4,
+        text: "Você tem acesso fácil aos meios necessários para se comunicar com colegas e liderança durante o trabalho?",
+        hint: "Responda se você tem meios adequados para se comunicar no trabalho.",
         reversed: true,
       },
+    ],
+  },
+  {
+    id: 13,
+    title: "Trabalho Remoto e Isolado",
+    description:
+      "Este tópico irá verificar se o trabalho à distância ou em isolamento tem gerado sensação de afastamento, solidão ou dificuldade de integração.",
+    questions: [
       {
-        id: 7,
-        text: "Você sente que sua vida pessoal é respeitada pela empresa?",
-        reversed: true,
+        id: 1,
+        text: "Você trabalha grande parte do tempo de forma remota ou sozinho(a), com pouco contato presencial com colegas ou liderança?",
+        hint: "Responda se você trabalha a maior parte do tempo sozinho(a) ou à distância.",
       },
       {
-        id: 8,
-        text: "Há incentivo ao bem-estar e qualidade de vida no trabalho?",
-        reversed: true,
+        id: 2,
+        text: "Você sente que o trabalho remoto ou isolado faz com que se sinta distante da equipe ou da empresa?",
+        hint: "Responda se isso faz você se sentir distante da equipe ou da empresa.",
       },
       {
-        id: 9,
-        text: "O estresse profissional afeta sua vida familiar?",
-      },
-      {
-        id: 10,
-        text: "O ambiente corporativo valoriza o descanso e recuperação dos funcionários?",
+        id: 3,
+        text: "Mesmo trabalhando de forma remota ou isolada, você sente que recebe apoio e acompanhamento adequados da empresa?",
+        hint: "Responda se, mesmo à distância, você recebe apoio da empresa.",
         reversed: true,
       },
     ],
