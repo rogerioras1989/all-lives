@@ -13,6 +13,8 @@ function hashCpf(cpf: string) {
   return crypto.createHmac("sha256", secret).update(cpf.replace(/\D/g, "")).digest("hex");
 }
 
+const COMPANY_PASSWORD = "demo123";
+
 const demoCompanies = [
   {
     company: {
@@ -113,13 +115,15 @@ const demoCompanies = [
 ];
 
 async function seedCompany(item: (typeof demoCompanies)[number], consultantId: string) {
+  const adminPasswordHash = await bcrypt.hash(COMPANY_PASSWORD, 12);
   const company = await prisma.company.upsert({
     where: { slug: item.company.slug },
     update: {
       name: item.company.name,
       cnpj: item.company.cnpj,
+      adminPasswordHash,
     },
-    create: item.company,
+    create: { ...item.company, adminPasswordHash },
   });
   console.log("✅ Company:", company.name);
 

@@ -18,6 +18,12 @@ export async function PATCH(
     const body = await req.json();
     const { title, description, sector, assignedTo, dueDate, status } = body;
 
+    // BUG-17: validar status contra enum antes de enviar ao Prisma
+    const VALID_STATUSES = ["PENDING", "IN_PROGRESS", "DONE", "CANCELLED"];
+    if (status !== undefined && !VALID_STATUSES.includes(status)) {
+      return NextResponse.json({ error: `status inválido. Use: ${VALID_STATUSES.join(", ")}` }, { status: 400 });
+    }
+
     const updated = await prisma.actionPlan.update({
       where: { id },
       data: {

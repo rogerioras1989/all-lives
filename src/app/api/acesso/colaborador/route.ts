@@ -7,14 +7,9 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Informe o nome ou código da empresa." }, { status: 400 });
   }
 
-  // Busca por slug exato ou nome case-insensitive
-  const company = await prisma.company.findFirst({
-    where: {
-      OR: [
-        { slug: empresa.toLowerCase() },
-        { name: { contains: empresa, mode: "insensitive" } },
-      ],
-    },
+  // BUG-7: busca apenas por slug exato para evitar enumeração de empresas
+  const company = await prisma.company.findUnique({
+    where: { slug: empresa.toLowerCase() },
     select: { id: true, name: true, slug: true, logoUrl: true },
   });
 

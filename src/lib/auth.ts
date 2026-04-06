@@ -97,10 +97,10 @@ export function verifyTotp(token: string, secret: string): boolean {
 // ── JWT ───────────────────────────────────────────────────────────────────────
 
 export interface AccessTokenPayload {
-  sub: string;       // userId or consultantId
+  sub: string;       // userId, consultantId, or companyId
   role: string;
   companyId?: string;
-  type: "user" | "consultant";
+  type: "user" | "consultant" | "company";
 }
 
 export interface RefreshTokenPayload {
@@ -109,8 +109,8 @@ export interface RefreshTokenPayload {
   jti: string;       // random id to allow revocation
 }
 
-export function signAccessToken(payload: AccessTokenPayload): string {
-  return jwt.sign(payload, getJwtSecret(), { expiresIn: ACCESS_TOKEN_TTL });
+export function signAccessToken(payload: AccessTokenPayload, expiresIn = ACCESS_TOKEN_TTL): string {
+  return jwt.sign(payload, getJwtSecret(), { expiresIn } as jwt.SignOptions);
 }
 
 export function signRefreshToken(payload: Omit<RefreshTokenPayload, "jti">): string {

@@ -16,7 +16,8 @@ model Company {
   logoUrl           String?
   segment           String?  // fix #4: segment for benchmarking
   helpUrl           String?  // fix #11: help link for crisis button
-  adminPasswordHash String?  // acesso empresa sem usuário individual
+  adminPasswordHash    String?  // acesso empresa sem usuário individual
+  publicResultsEnabled Boolean  @default(false) // BUG-25: controle por empresa de resultados públicos
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

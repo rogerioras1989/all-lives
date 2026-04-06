@@ -34,10 +34,13 @@ export async function GET(
 
     const { searchParams } = new URL(req.url);
     const topicId = searchParams.get("topicId");
+    // BUG-11: consolidar chave "response" em objeto único para evitar sobrescrita por spread
     const comments = await prisma.topicComment.findMany({
       where: {
-        response: { campaignId: id },
-        ...(managerSector ? { response: { campaignId: id, sector: managerSector } } : {}),
+        response: {
+          campaignId: id,
+          ...(managerSector ? { sector: managerSector } : {}),
+        },
         ...(topicId ? { topicId: Number(topicId) } : {}),
       },
       select: {

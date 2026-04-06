@@ -10,20 +10,22 @@ export async function GET(
   { params }: { params: Promise<{ slug: string }> }
 ) {
   try {
-    if (!PUBLIC_RESULTS_ENABLED) {
-      return NextResponse.json({ error: "Resultados públicos desabilitados" }, { status: 403 });
-    }
     const { slug } = await params;
     const campaign = await prisma.campaign.findFirst({
       where: { slug, status: { in: ["ACTIVE", "CLOSED"] } },
       select: {
         id: true, title: true, status: true, startDate: true, endDate: true,
-        company: { select: { name: true, helpUrl: true } },
+        company: { select: { name: true, helpUrl: true, publicResultsEnabled: true } },
       },
     });
 
     if (!campaign) {
       return NextResponse.json({ error: "Campanha não encontrada ou não disponível" }, { status: 404 });
+    }
+
+    // BUG-25: verificar flag global E flag por empresa antes de liberar dados
+    if (!PUBLIC_RESULTS_ENABLED || !campaign.company.publicResultsEnabled) {
+      return NextResponse.json({ error: "Resultados públicos não habilitados para esta empresa" }, { status: 403 });
     }
 
     const totalResponses = await prisma.response.count({ where: { campaignId: campaign.id } });

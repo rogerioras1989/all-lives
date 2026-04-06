@@ -62,9 +62,11 @@ export async function POST(
           continue;
         }
 
+        // BUG-10: incluir companyId na busca para evitar falso conflito cross-tenant
         const existing = cpfHash
           ? await prisma.user.findFirst({
               where: {
+                companyId,
                 OR: [
                   { cpfHash },
                   ...(normalizedEmail ? [{ email: normalizedEmail }] : []),

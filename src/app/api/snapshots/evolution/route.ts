@@ -6,12 +6,18 @@ export async function GET(req: NextRequest) {
   try {
     const ctx = await getTenantContext(req);
     
-    // Buscar todos os snapshots das campanhas da empresa
+    // BUG-13: adicionar limite de paginação para evitar respostas enormes
+    const url = new URL(req.url);
+    const take = Math.min(Number(url.searchParams.get("take") ?? 100), 500);
+    const skip = Math.max(Number(url.searchParams.get("skip") ?? 0), 0);
+
     const snapshots = await prisma.campaignSnapshot.findMany({
       where: {
         campaign: { companyId: ctx.companyId }
       },
       orderBy: { snapshotDate: "asc" },
+      take,
+      skip,
       select: {
         snapshotDate: true,
         topicScoresJson: true,

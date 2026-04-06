@@ -35,9 +35,14 @@ export async function POST(
 
     const { scope = "CAMPAIGN", sector } = await req.json();
 
-    // fix #11 — rate limiting: verificar última análise do mesmo scope para esta campanha
+    // BUG-14: cooldown filtrado por scope + sector (para não bloquear setores distintos)
     const lastAnalysis = await prisma.aiAnalysis.findFirst({
-      where: { campaignId: id, scope: scope as "CAMPAIGN" | "SECTOR" | "INDIVIDUAL" },
+      where: {
+        campaignId: id,
+        scope: scope as "CAMPAIGN" | "SECTOR" | "INDIVIDUAL",
+        // quando scope=SECTOR, filtrar pelo setor específico para cooldowns independentes
+        ...(scope === "SECTOR" && sector ? { sector } : {}),
+      },
       orderBy: { createdAt: "desc" },
       select: { createdAt: true },
     });

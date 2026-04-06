@@ -239,16 +239,20 @@ export default function DashboardPage() {
       })
       .catch(() => setLoading(false));
 
-    // Fetch Benchmarking
+  }, [router]);
+
+  // BUG-15: benchmarking e evolution só após autenticação confirmada
+  useEffect(() => {
+    if (!me) return;
     fetch("/api/companies/benchmarking")
       .then((r) => r.json())
-      .then((d) => { if (!d.error) setBenchmarkingData(d); });
-
-    // Fetch Evolution
+      .then((d) => { if (!d.error) setBenchmarkingData(d); })
+      .catch(() => {});
     fetch("/api/snapshots/evolution")
       .then((r) => r.json())
-      .then((d) => { if (!d.error) setEvolutionData(d); });
-  }, [router]);
+      .then((d) => { if (!d.error) setEvolutionData(d); })
+      .catch(() => {});
+  }, [me]);
 
   function closeOnboarding() {
     localStorage.setItem("drps_onboarded", "1");
@@ -417,7 +421,8 @@ export default function DashboardPage() {
             {campaigns.length > 0 && (
               <div className="relative">
                 <select value={activeCampaignId} onChange={(e) => setActiveCampaignId(e.target.value)} className="border rounded-xl pl-3 pr-8 py-2 text-sm outline-none appearance-none" style={{ borderColor: "rgba(91,158,201,0.3)", background: "white", color: "#1e3a4a" }}>
-                  {campaigns.map((c) => <option key={c.id} value={c.id}>{c.title} ({STATUS_LABEL[c.status]}) · {c._count.responses} resp.</option>)}
+                  {/* BUG-22: ocultar campanhas DRAFT do seletor */}
+                  {campaigns.filter((c) => c.status !== "DRAFT").map((c) => <option key={c.id} value={c.id}>{c.title} ({STATUS_LABEL[c.status]}) · {c._count.responses} resp.</option>)}
                 </select>
                 <span className="absolute right-2.5 top-2.5 text-xs pointer-events-none" style={{ color: "#7a9aaa" }}>▼</span>
               </div>

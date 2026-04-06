@@ -1,14 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { calculateTopicScore, getRiskLevel, TOPICS, SECTORS } from "@/data/questionnaire";
+import { calculateTopicScore, getRiskLevel, TOPICS } from "@/data/questionnaire";
 import crypto from "crypto";
 
 const VALID_TOPIC_IDS = new Set(TOPICS.map((t) => t.id));
-const MAX_ANSWERS = TOPICS.length * 10; // 90
 const MAX_COMMENT_LENGTH = 2000;
 const EXPECTED_ANSWER_KEYS = new Set(
   TOPICS.flatMap((topic) => topic.questions.map((question) => `${topic.id}-${question.id}`))
 );
+const MAX_ANSWERS = EXPECTED_ANSWER_KEYS.size; // dinâmico baseado no questionário atual
 const RESPONSE_WINDOW_MS = 60 * 60 * 1000;
 const MAX_SUBMISSIONS_PER_WINDOW = 3;
 const submissionStore = new Map<string, { count: number; windowStart: number }>();
@@ -65,8 +65,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Dados inválidos" }, { status: 400 });
     }
 
-    // fix #13 — validate sector against known values
-    if (!SECTORS.includes(sector)) {
+    // BUG-8: validação de setor removida — setores são configurados por empresa, não hardcoded
+    if (typeof sector !== "string" || sector.trim().length === 0) {
       return NextResponse.json({ error: "Setor inválido" }, { status: 400 });
     }
 

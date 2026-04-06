@@ -52,6 +52,12 @@ export async function PATCH(req: NextRequest) {
     const body = await req.json();
     const { id, action } = body;
 
+    // BUG-16: validar action contra valores permitidos
+    const VALID_ACTIONS = ["acknowledge", "resolve", "assign"] as const;
+    if (!id || !VALID_ACTIONS.includes(action)) {
+      return NextResponse.json({ error: "action deve ser: acknowledge, resolve ou assign" }, { status: 400 });
+    }
+
     const alert = await prisma.sectorAlert.findUnique({ where: { id } });
     if (!alert || alert.companyId !== ctx.companyId) {
       return NextResponse.json({ error: "Não encontrado" }, { status: 404 });
