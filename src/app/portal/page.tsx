@@ -38,9 +38,10 @@ export default function PortalPage() {
     fetch("/api/portal")
       .then((r) => {
         if (r.status === 401) { router.push("/login"); return null; }
+        if (r.status === 403) { router.push("/dashboard"); return null; }
         return r.json();
       })
-      .then((d) => { if (d) setData(d); setLoading(false); })
+      .then((d) => { if (d && !d.error) setData(d); setLoading(false); })
       .catch(() => setLoading(false));
   }, [router]);
 
@@ -56,9 +57,10 @@ export default function PortalPage() {
   if (!data) return null;
   const { user, responses, activeCampaign, sectorMetrics } = data;
 
-  const lastResponse = responses[0];
-  const trend = responses.length >= 2
-    ? (responses[0].totalScore ?? 0) - (responses[1].totalScore ?? 0)
+  const safeResponses = responses ?? [];
+  const lastResponse = safeResponses[0] ?? null;
+  const trend = safeResponses.length >= 2
+    ? (safeResponses[0].totalScore ?? 0) - (safeResponses[1].totalScore ?? 0)
     : null;
 
   return (
