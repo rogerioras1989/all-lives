@@ -143,6 +143,8 @@ model User {
   participants CampaignParticipant[]
   invites      CampaignInvite[]
   comments     TopicComment[]
+
+  @@index([companyId])
 }
 
 enum Role {
@@ -176,6 +178,9 @@ model Campaign {
   aiAnalyses   AiAnalysis[]
   snapshots    CampaignSnapshot[]
   actionPlans  ActionPlan[]
+
+  @@index([companyId])
+  @@index([companyId, status])
 }
 
 enum CampaignStatus {
@@ -213,6 +218,9 @@ model CampaignInvite {
   openedAt   DateTime?
   expiresAt  DateTime
   createdAt  DateTime     @default(now())
+
+  @@index([campaignId])
+  @@index([userId])
 }
 
 enum InviteStatus {
@@ -243,6 +251,9 @@ model Response {
   aiAnalyses AiAnalysis[]
 
   @@index([campaignId]) // fix #10
+  @@index([campaignId, sector])
+  @@index([campaignId, createdAt])
+  @@index([campaignId, riskLevel])
 }
 
 model Answer {

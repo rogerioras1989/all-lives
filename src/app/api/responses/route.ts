@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { calculateTopicScore, getRiskLevel, TOPICS } from "@/data/questionnaire";
+import { invalidateCampaignResults } from "@/lib/campaign-cache";
 import crypto from "crypto";
 
 const VALID_TOPIC_IDS = new Set(TOPICS.map((t) => t.id));
@@ -189,6 +190,10 @@ export async function POST(req: NextRequest) {
         include: { scores: true },
       });
     });
+
+    // Invalida cache de resultados da campanha — garante que dashboards
+    // reflitam a nova resposta sem stale.
+    invalidateCampaignResults(campaignId);
 
     return NextResponse.json({
       success: true,

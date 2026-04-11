@@ -28,17 +28,30 @@ npm run dev
 
 Abra `http://localhost:3000`.
 
+## Scripts úteis
+
+- `npm run dev` — servidor Next em modo desenvolvimento
+- `npm run build` — gera client Prisma e build de produção
+- `npm run lint` — ESLint (com regras jsx-a11y)
+- `npm run typecheck` — verificação de tipos sem emitir
+- `npm test` — testes Vitest
+- `npm run test:watch` — Vitest em modo watch
+- `npm run db:seed` / `db:seed:demo` / `db:seed:demo-responses` — seeds do banco
+- `npm run security:migrate-hr-keys` — migra chaves de integração legadas para hash
+
 ## Variáveis de ambiente
 
-Use [`.env.example`](/home/rogerio/psico-all-lives/app/.env.example) como modelo.
+Copie `.env.example` (na raiz do projeto) para `.env` e preencha:
 
 - `DATABASE_URL`: conexão do PostgreSQL
 - `NEXTAUTH_URL`: URL pública da aplicação
 - `JWT_SECRET`: segredo dos access/refresh tokens
+- `AUTH_RATE_LIMIT_SECRET`: segredo do rate limiter persistido (opcional — cai pra `JWT_SECRET`)
 - `CPF_HMAC_SECRET`: segredo para anonimização determinística de CPF
-- `APP_ENCRYPTION_KEY`: chave AES-256-GCM em hex para TOTP
+- `APP_ENCRYPTION_KEY`: chave AES-256-GCM em hex (32 bytes) usada por TOTP **e** pela criptografia em repouso de campos sensíveis (ex.: descrição de denúncia anônima)
 - `ANTHROPIC_API_KEY`: chave da integração Anthropic
 - `ENABLE_PUBLIC_RESULTS`: mantenha `false` por padrão
+- `LOG_LEVEL`: opcional, default `info` em produção e `debug` em dev
 
 ## Rotas principais
 
