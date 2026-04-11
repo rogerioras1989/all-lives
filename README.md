@@ -52,6 +52,7 @@ Copie `.env.example` (na raiz do projeto) para `.env` e preencha:
 - `ANTHROPIC_API_KEY`: chave da integração Anthropic
 - `ENABLE_PUBLIC_RESULTS`: mantenha `false` por padrão
 - `LOG_LEVEL`: opcional, default `info` em produção e `debug` em dev
+- `NEXT_PUBLIC_ENABLE_DEV_BYPASS`: opcional. Quando `true` **e** o ambiente não é produção, exibe um botão de login rápido nas páginas `/acesso/*` e `/consultor/login` que entra com as credenciais demo seedadas. Útil para QA local — **nunca** habilitar em produção
 
 ## Rotas principais
 

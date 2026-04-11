@@ -3,6 +3,7 @@ import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import DevQuickLogin from "@/components/DevQuickLogin";
 
 export default function AcessoEmpresaPage() {
   const router = useRouter();
@@ -157,6 +158,21 @@ export default function AcessoEmpresaPage() {
               )}
             </button>
           </form>
+
+          <DevQuickLogin
+            presets={[
+              {
+                label: "Entrar como Empresa demo",
+                description: "demo-empresa / demo123",
+                request: {
+                  url: "/api/acesso/empresa",
+                  method: "POST",
+                  body: { slug: "demo-empresa", password: "demo123" },
+                },
+                redirect: "/dashboard",
+              },
+            ]}
+          />
         </div>
 
         <Link href="/login" className="block text-center text-sm py-2 transition-colors"

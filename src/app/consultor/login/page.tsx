@@ -2,6 +2,7 @@
 import { useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
+import DevQuickLogin from "@/components/DevQuickLogin";
 
 export default function ConsultorLoginPage() {
   const router = useRouter();
@@ -88,6 +89,24 @@ export default function ConsultorLoginPage() {
               {loading ? "Entrando…" : "Entrar"}
             </button>
           </form>
+
+          <DevQuickLogin
+            presets={[
+              {
+                label: "Entrar como Consultor demo",
+                description: "consultor@alllives.com.br / consultor123",
+                request: {
+                  url: "/api/consultor/login",
+                  method: "POST",
+                  body: {
+                    email: "consultor@alllives.com.br",
+                    password: "consultor123",
+                  },
+                },
+                redirect: "/consultor",
+              },
+            ]}
+          />
         </div>
 
         <p className="text-center text-xs mt-6" style={{ color: "#aac0cc" }}>

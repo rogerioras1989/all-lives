@@ -3,6 +3,7 @@ import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import DevQuickLogin from "@/components/DevQuickLogin";
 
 export default function AcessoColaboradorPage() {
   const router = useRouter();
@@ -117,6 +118,27 @@ export default function AcessoColaboradorPage() {
               )}
             </button>
           </form>
+
+          <DevQuickLogin
+            presets={[
+              {
+                label: "Ir direto para o questionário demo",
+                description: "Empresa Demo Ltda → campaign-demo",
+                request: {
+                  url: "/api/acesso/colaborador?empresa=Demo",
+                  method: "GET",
+                },
+                redirect: (data) => {
+                  const campaignId = (
+                    data as { campaign?: { id?: string } }
+                  )?.campaign?.id;
+                  return campaignId
+                    ? `/questionario?campaign=${campaignId}`
+                    : "/questionario";
+                },
+              },
+            ]}
+          />
 
           {/* Anonimato */}
           <div className="mt-6 rounded-xl p-3 flex items-start gap-3"
