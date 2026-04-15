@@ -1,28 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import crypto from "crypto";
+import {
+  consumeRateLimit,
+  getRequestIp,
+  rateLimitResponse,
+} from "@/lib/rate-limit";
+import { encryptString } from "@/lib/encryption";
+import { logger } from "@/lib/logger";
 
 const VALID_PRIORITIES = ["LOW", "MEDIUM", "HIGH", "URGENT"] as const;
 
-// BUG-19: rate limiting por IP
+// BUG-19: rate limiting por IP — agora persistido em DB via consumeRateLimit
 const RATE_WINDOW_MS = 60 * 60 * 1000; // 1 hora
 const MAX_REPORTS_PER_WINDOW = 5;
-const reportStore = new Map<string, { count: number; windowStart: number }>();
-
-function checkRateLimit(ipHash: string): boolean {
-  const now = Date.now();
-  const entry = reportStore.get(ipHash);
-  if (!entry || now - entry.windowStart > RATE_WINDOW_MS) {
-    reportStore.set(ipHash, { count: 1, windowStart: now });
-    return true;
-  }
-  entry.count += 1;
-  return entry.count <= MAX_REPORTS_PER_WINDOW;
-}
-
-function getIp(req: NextRequest): string {
-  return req.headers.get("x-forwarded-for")?.split(",")[0].trim() ?? "unknown";
-}
 
 function hashIp(ip: string): string {
   const secret = process.env.CPF_HMAC_SECRET ?? process.env.JWT_SECRET ?? "fallback";
@@ -44,18 +35,31 @@ async function generateUniqueProtocol(maxAttempts = 5): Promise<string> {
 
 export async function POST(req: NextRequest) {
   try {
-    const ip = getIp(req);
+    const ip = getRequestIp(req);
     const ipHash = hashIp(ip);
 
-    // BUG-19: rate limiting
-    if (!checkRateLimit(ipHash)) {
-      return NextResponse.json({ error: "Limite de denúncias atingido. Tente novamente mais tarde." }, { status: 429 });
+    // BUG-19: rate limiting — agora persistente entre instâncias
+    const limit = await consumeRateLimit({
+      req,
+      scope: "whistleblower:create",
+      maxAttempts: MAX_REPORTS_PER_WINDOW,
+      windowMs: RATE_WINDOW_MS,
+    });
+    if (!limit.allowed) {
+      return rateLimitResponse(
+        limit,
+        "Limite de denúncias atingido. Tente novamente mais tarde."
+      );
     }
 
     const { companySlug, topic, description, priority } = await req.json();
 
     if (!companySlug || !topic || !description) {
       return NextResponse.json({ error: "Dados incompletos" }, { status: 400 });
+    }
+
+    if (typeof description !== "string" || description.trim().length === 0) {
+      return NextResponse.json({ error: "Descrição obrigatória" }, { status: 400 });
     }
 
     // BUG-18: validar priority contra enum
@@ -69,11 +73,15 @@ export async function POST(req: NextRequest) {
     // BUG-20: protocolo único com retry
     const protocol = await generateUniqueProtocol();
 
+    // Hardening: criptografar a descrição em repouso quando APP_ENCRYPTION_KEY existe.
+    // Reduz o impacto de um leak do banco de dados em um canal sensível.
+    const storedDescription = encryptString(description.trim());
+
     const report = await prisma.whistleblowerReport.create({
       data: {
         companyId: company.id,
         topic,
-        description,
+        description: storedDescription,
         priority: safePriority,
         protocol,
         status: "OPEN",
@@ -81,13 +89,18 @@ export async function POST(req: NextRequest) {
       },
     });
 
+    logger.info(
+      { scope: "whistleblower", companyId: company.id, protocol: report.protocol },
+      "denúncia criada"
+    );
+
     return NextResponse.json({
       success: true,
       protocol: report.protocol,
       message: "Denúncia enviada com sucesso. Guarde seu protocolo para acompanhar.",
     });
   } catch (err) {
-    console.error("[whistleblower]", err);
+    logger.error({ scope: "whistleblower", err }, "erro ao criar denúncia");
     return NextResponse.json({ error: "Erro interno" }, { status: 500 });
   }
 }

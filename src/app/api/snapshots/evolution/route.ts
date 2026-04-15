@@ -28,7 +28,13 @@ export async function GET(req: NextRequest) {
     });
 
     // Formatar para visualização de heatmap (Eixo X: Tempo, Eixo Y: Tópico, Valor: Score)
-    const evolution: any[] = snapshots.map(snap => ({
+    type EvolutionPoint = {
+      date: Date;
+      campaign: string;
+      overall: number;
+      topics: unknown;
+    };
+    const evolution: EvolutionPoint[] = snapshots.map(snap => ({
       date: snap.snapshotDate,
       campaign: snap.campaign.title,
       overall: snap.overallScore,

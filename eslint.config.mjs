@@ -5,13 +5,37 @@ import nextTs from "eslint-config-next/typescript";
 const eslintConfig = defineConfig([
   ...nextVitals,
   ...nextTs,
-  // Override default ignores of eslint-config-next.
+  // Acessibilidade (WCAG): regras adicionais do jsx-a11y. O eslint-config-next
+  // já registra o plugin, então aqui apenas habilitamos/elevamos regras
+  // específicas em modo "warn" para permitir migração incremental.
+  {
+    files: ["**/*.{jsx,tsx}"],
+    rules: {
+      "jsx-a11y/alt-text": "warn",
+      "jsx-a11y/anchor-has-content": "warn",
+      "jsx-a11y/anchor-is-valid": "warn",
+      "jsx-a11y/aria-props": "warn",
+      "jsx-a11y/aria-proptypes": "warn",
+      "jsx-a11y/aria-unsupported-elements": "warn",
+      "jsx-a11y/role-has-required-aria-props": "warn",
+      "jsx-a11y/role-supports-aria-props": "warn",
+      "jsx-a11y/click-events-have-key-events": "warn",
+      "jsx-a11y/no-static-element-interactions": "warn",
+      "jsx-a11y/label-has-associated-control": "warn",
+      "jsx-a11y/no-noninteractive-element-interactions": "warn",
+      "jsx-a11y/heading-has-content": "warn",
+      "jsx-a11y/iframe-has-title": "warn",
+      "jsx-a11y/img-redundant-alt": "warn",
+      "jsx-a11y/no-redundant-roles": "warn",
+    },
+  },
+  // Generated Prisma client e código gerado pelo Next.
   globalIgnores([
-    // Default ignores of eslint-config-next:
     ".next/**",
     "out/**",
     "build/**",
     "next-env.d.ts",
+    "src/generated/**",
   ]),
 ]);
 

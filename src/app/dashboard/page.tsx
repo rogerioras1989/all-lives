@@ -629,7 +629,7 @@ export default function DashboardPage() {
                       <div key={i} className="flex-1 min-w-[120px]">
                         <div className="text-[10px] font-bold text-center mb-2" style={{ color: "#7a9aaa" }}>{new Date(ev.date).toLocaleDateString("pt-BR", { month: "short", year: "2-digit" })}</div>
                         <div className="space-y-1">
-                          {(ev.topics as any[]).map((t) => (
+                          {ev.topics.map((t) => (
                             <div key={t.topicId} className="h-6 rounded text-[8px] flex items-center justify-center font-bold text-white transition-all hover:scale-105" 
                               style={{ background: RISK_COLORS[getRisk(t.score)], opacity: 0.8 }}
                               title={`${t.topicName}: ${Math.round(t.score)}%`}>

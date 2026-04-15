@@ -48,8 +48,9 @@ export async function GET(req: NextRequest) {
     // BUG-26: ler o campo correto `avgScore` (snapshot grava avgScore, não score)
     const topicAggregates: Record<number, { weightedSum: number; totalCount: number; name: string }> = {};
 
+    type SnapshotTopicScore = { topicId: number; topicName: string; avgScore?: number };
     snapshots.forEach((snap) => {
-      const topicScores = snap.topicScoresJson as any[];
+      const topicScores = snap.topicScoresJson as unknown as SnapshotTopicScore[];
       if (!Array.isArray(topicScores)) return;
       const weight = snap.totalResponses > 0 ? snap.totalResponses : 1;
       topicScores.forEach((ts) => {

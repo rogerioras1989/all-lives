@@ -7,13 +7,19 @@
     "build": "prisma generate && next build",
     "start": "next start",
     "lint": "eslint",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:ui": "vitest --ui",
     "db:migrate": "prisma migrate dev",
-    "db:seed": "ts-node prisma/seed.ts",
+    "db:seed": "tsx prisma/seed.ts",
+    "db:seed:demo": "tsx prisma/seed-demo.ts",
+    "db:seed:demo-responses": "tsx prisma/seed-demo-responses.ts",
     "db:studio": "prisma studio",
     "security:migrate-hr-keys": "tsx scripts/hash-legacy-hr-keys.ts"
   },
   "prisma": {
-    "seed": "ts-node prisma/seed.ts"
+    "seed": "tsx prisma/seed.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.78.0",
@@ -37,13 +43,13 @@
     "nodemailer": "^8.0.2",
     "papaparse": "^5.5.3",
     "pg": "^8.20.0",
+    "pino": "^10.3.1",
     "prisma": "^7.4.2",
     "qrcode": "^1.5.4",
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "recharts": "^3.8.0",
     "speakeasy": "^2.0.0",
-    "ts-node": "^10.9.2",
     "tsx": "^4.21.0",
     "zod": "^4.3.6"
   },
@@ -53,9 +59,12 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@vitest/ui": "^4.1.4",
     "eslint": "^9",
     "eslint-config-next": "16.1.6",
+    "eslint-plugin-jsx-a11y": "^6.10.2",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^4.1.4"
   }
 }

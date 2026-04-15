@@ -6,10 +6,29 @@ import Link from "next/link";
 
 const LOGO = "https://all-livesocupacional.com.br/wp-content/uploads/2025/01/AllLivesPreferencial-copiar.png.webp";
 
+type WhistleblowerMessage = {
+  id: string;
+  sender: string;
+  text: string;
+  createdAt: string;
+};
+
+type WhistleblowerReportView = {
+  id: string;
+  protocol: string;
+  topic: string;
+  description: string;
+  status: string;
+  priority: string;
+  createdAt: string;
+  messages: WhistleblowerMessage[];
+  company: { name: string };
+};
+
 function FollowUpContent() {
   const searchParams = useSearchParams();
   const [protocolInput, setProtocolInput] = useState(searchParams.get("protocol") || "");
-  const [report, setReport] = useState<any>(null);
+  const [report, setReport] = useState<WhistleblowerReportView | null>(null);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
   const [sending, setSending] = useState(false);
@@ -35,7 +54,7 @@ function FollowUpContent() {
 
   const handleReply = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!message.trim()) return;
+    if (!message.trim() || !report) return;
     setSending(true);
     try {
       await fetch(`/api/whistleblower/${report.protocol}/message`, {
@@ -45,7 +64,7 @@ function FollowUpContent() {
       });
       setMessage("");
       fetchReport(report.protocol);
-    } catch (err) {
+    } catch {
       alert("Erro ao enviar mensagem");
     } finally {
       setSending(false);
@@ -110,7 +129,7 @@ function FollowUpContent() {
                   {report.messages.length === 0 && (
                     <p className="text-xs italic" style={{ color: "#aac0cc" }}>Aguardando primeira resposta da equipe de ética.</p>
                   )}
-                  {report.messages.map((m: any) => (
+                  {report.messages.map((m) => (
                     <div key={m.id} className={`flex ${m.sender === "ANONYMOUS" ? "justify-end" : "justify-start"}`}>
                       <div className={`max-w-[80%] p-4 rounded-2xl text-sm ${m.sender === "ANONYMOUS" ? "bg-[#2e7fa3] text-white rounded-tr-none" : "bg-white border rounded-tl-none border-gray-100 text-[#3a5a6a]"}`}>
                         <p className="text-[10px] font-bold mb-1 uppercase opacity-70">

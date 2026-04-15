@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { decryptString } from "@/lib/encryption";
+import { logger } from "@/lib/logger";
 
 export async function GET(
-  req: NextRequest,
+  _req: NextRequest,
   { params }: { params: Promise<{ protocol: string }> }
 ) {
   const { protocol } = await params;
@@ -19,8 +21,14 @@ export async function GET(
       return NextResponse.json({ error: "Protocolo não encontrado" }, { status: 404 });
     }
 
-    return NextResponse.json(report);
+    // Descriptografa a descrição se estiver no formato `enc:v1:...`.
+    // Valores legados (texto puro) passam direto.
+    return NextResponse.json({
+      ...report,
+      description: decryptString(report.description),
+    });
   } catch (err) {
+    logger.error({ scope: "whistleblower", err, protocol }, "erro ao ler denúncia");
     return NextResponse.json({ error: "Erro interno" }, { status: 500 });
   }
 }
