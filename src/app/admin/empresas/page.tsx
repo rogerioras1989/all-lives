@@ -31,7 +31,7 @@ export default function AdminEmpresasPage() {
 
   useEffect(() => {
     fetch("/api/admin/empresas")
-      .then(r => { if (r.status === 401 || r.status === 403) { router.push("/acesso/admin"); return null; } return r.json(); })
+      .then(r => { if (r.status === 401 || r.status === 403) { router.push("/login"); return null; } return r.json(); })
       .then(d => d && setCompanies(d))
       .finally(() => setLoading(false));
   }, [router]);

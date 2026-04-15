@@ -31,7 +31,7 @@ export default function AdminEmpresaDetailPage() {
 
   useEffect(() => {
     fetch(`/api/admin/empresas/${id}`)
-      .then(r => { if (r.status === 401 || r.status === 403) { router.push("/acesso/admin"); return null; } return r.json(); })
+      .then(r => { if (r.status === 401 || r.status === 403) { router.push("/login"); return null; } return r.json(); })
       .then(d => { if (d) { setCompany(d); setEditName(d.name); setEditSlug(d.slug); } })
       .finally(() => setLoading(false));
   }, [id, router]);

@@ -28,7 +28,7 @@ export default function AdminConsultoresPage() {
 
   useEffect(() => {
     fetch("/api/admin/consultores")
-      .then(r => { if (r.status === 401 || r.status === 403) { router.push("/acesso/admin"); return null; } return r.json(); })
+      .then(r => { if (r.status === 401 || r.status === 403) { router.push("/login"); return null; } return r.json(); })
       .then(d => d && setConsultants(d))
       .finally(() => setLoading(false));
   }, [router]);

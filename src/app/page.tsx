@@ -455,7 +455,7 @@ export default function LandingPage() {
           <div style={{ display: "flex", gap: 28, flexWrap: "wrap" }}>
             <Link href="/login" style={{ color: "rgba(255,255,255,0.4)", fontSize: 13, textDecoration: "none" }}>Acessar</Link>
             <Link href="/blog" style={{ color: "rgba(255,255,255,0.4)", fontSize: 13, textDecoration: "none" }}>Blog</Link>
-            <Link href="/consultor/login" style={{ color: "rgba(255,255,255,0.4)", fontSize: 13, textDecoration: "none" }}>Portal Consultor</Link>
+            <Link href="/login" style={{ color: "rgba(255,255,255,0.4)", fontSize: 13, textDecoration: "none" }}>Portal Consultor</Link>
           </div>
           <p style={{ color: "rgba(255,255,255,0.25)", fontSize: 12, margin: 0 }}>© 2025 All Lives Gestão Ocupacional. Todos os direitos reservados.</p>
         </div>

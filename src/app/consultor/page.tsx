@@ -68,6 +68,16 @@ type OverviewData = {
   companies: CompanyCard[];
 };
 
+type ConsultantItem = {
+  id: string;
+  name: string;
+  email: string;
+  globalRole: string;
+  lastLoginAt: string | null;
+  createdAt: string;
+  _count: { companies: number };
+};
+
 type BinaryFilter = "ALL" | "YES" | "NO";
 type ActivityFilter = "ALL" | "NONE" | "LAST_7_DAYS" | "LAST_30_DAYS" | "STALE";
 type ResponseRangeFilter = "ALL" | "0" | "1_10" | "11_50" | "51_PLUS";
@@ -92,6 +102,14 @@ const ROLE_LABEL: Record<string, string> = {
   CONSULTANT: "Consultor All Lives",
   ANALYST: "Analista All Lives",
 };
+
+const CONSULTANT_ROLE_LABEL: Record<string, string> = { OWNER: "Admin", CONSULTANT: "Consultor", ANALYST: "Analista" };
+const CONSULTANT_ROLE_COLOR: Record<string, string> = { OWNER: "#dc2626", CONSULTANT: "#2e7fa3", ANALYST: "#5baa6d" };
+
+function genPassword(len = 12) {
+  const chars = "abcdefghijkmnpqrstuvwxyz23456789";
+  return Array.from({ length: len }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
+}
 
 const HEALTH_LABEL: Record<CompanyCard["healthStatus"], string> = {
   HEALTHY: "Saudável",
@@ -189,17 +207,36 @@ export default function ConsultorPage() {
   const [createError, setCreateError] = useState("");
   const [createForm, setCreateForm] = useState(initialCreateForm);
 
+  // Consultant management (OWNER only)
+  const [consultants, setConsultants] = useState<ConsultantItem[]>([]);
+  const [consultantsLoading, setConsultantsLoading] = useState(false);
+  const [showConsultantForm, setShowConsultantForm] = useState(false);
+  const [consultantForm, setConsultantForm] = useState({ name: "", email: "", password: genPassword(), globalRole: "CONSULTANT" });
+  const [consultantSaving, setConsultantSaving] = useState(false);
+  const [consultantFormError, setConsultantFormError] = useState("");
+  const [deletingConsultantId, setDeletingConsultantId] = useState<string | null>(null);
+
   useEffect(() => {
     fetch("/api/consultor/overview")
       .then((response) => {
         if (response.status === 401 || response.status === 403) {
-          router.push("/consultor/login");
+          router.push("/login");
           return null;
         }
         return response.json();
       })
       .then((payload) => {
-        if (payload) setData(payload);
+        if (payload) {
+          setData(payload);
+          // Load consultants if OWNER
+          if (payload.viewer?.role === "OWNER") {
+            setConsultantsLoading(true);
+            fetch("/api/admin/consultores")
+              .then(r => r.ok ? r.json() : null)
+              .then(d => d && setConsultants(d))
+              .finally(() => setConsultantsLoading(false));
+          }
+        }
         setLoading(false);
       })
       .catch(() => setLoading(false));
@@ -208,7 +245,7 @@ export default function ConsultorPage() {
   async function refreshOverview() {
     const response = await fetch("/api/consultor/overview");
     if (response.status === 401 || response.status === 403) {
-      router.push("/consultor/login");
+      router.push("/login");
       return;
     }
     const payload = await response.json();
@@ -246,6 +283,34 @@ export default function ConsultorPage() {
     } finally {
       setCreatingCompany(false);
     }
+  }
+
+  async function handleCreateConsultant(e: React.FormEvent) {
+    e.preventDefault();
+    setConsultantSaving(true);
+    setConsultantFormError("");
+    try {
+      const res = await fetch("/api/admin/consultores", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(consultantForm),
+      });
+      const d = await res.json();
+      if (!res.ok) { setConsultantFormError(d.error); return; }
+      setConsultants(prev => [d, ...prev]);
+      setShowConsultantForm(false);
+      setConsultantForm({ name: "", email: "", password: genPassword(), globalRole: "CONSULTANT" });
+    } finally {
+      setConsultantSaving(false);
+    }
+  }
+
+  async function handleDeleteConsultant(id: string) {
+    if (!confirm("Remover este consultor?")) return;
+    setDeletingConsultantId(id);
+    await fetch(`/api/admin/consultores/${id}`, { method: "DELETE" });
+    setConsultants(prev => prev.filter(c => c.id !== id));
+    setDeletingConsultantId(null);
   }
 
   const filteredCompanies = useMemo(() => {
@@ -330,6 +395,10 @@ export default function ConsultorPage() {
       userRole={viewerRoleLabel}
       nav={[
         { href: "/consultor", label: "Painel geral", icon: "🌐" },
+        ...(data.viewer.role === "OWNER" ? [
+          { href: "/admin/empresas", label: "Gerenciar Empresas", icon: "🏢" },
+          { href: "/admin/consultores", label: "Gerenciar Consultores", icon: "👤" },
+        ] : []),
       ]}
       actions={<Link href="/" className="btn-ghost text-xs px-3 py-2">← Home</Link>}
     >
@@ -743,6 +812,152 @@ export default function ConsultorPage() {
           </div>
         </div>
       </div>
+
+      {/* Consultant management — OWNER only */}
+      {data.viewer.role === "OWNER" && (
+        <div className="mt-8">
+          <div className="card-3d-sm p-6">
+            <div className="flex items-center justify-between mb-5 gap-4 flex-wrap">
+              <div>
+                <h2 className="text-sm font-semibold" style={{ color: "#1e3a4a" }}>Consultores</h2>
+                <p className="mt-1 text-xs" style={{ color: "#7a9aaa" }}>
+                  {consultants.length} consultor{consultants.length !== 1 ? "es" : ""} cadastrado{consultants.length !== 1 ? "s" : ""}
+                </p>
+              </div>
+              <button
+                type="button"
+                className="btn-primary text-xs px-4 py-2 flex items-center gap-2"
+                onClick={() => { setShowConsultantForm(v => !v); setConsultantFormError(""); }}
+              >
+                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+                </svg>
+                {showConsultantForm ? "Cancelar" : "Novo consultor"}
+              </button>
+            </div>
+
+            {/* Create consultant form */}
+            {showConsultantForm && (
+              <div className="mb-6 rounded-2xl border p-5" style={{ borderColor: "rgba(91,158,201,0.15)", background: "rgba(91,158,201,0.03)" }}>
+                <form onSubmit={handleCreateConsultant} className="grid gap-4 lg:grid-cols-2">
+                  <div>
+                    <label className="block text-xs font-semibold mb-1.5" style={{ color: "#7a9aaa" }}>Nome</label>
+                    <input
+                      value={consultantForm.name}
+                      onChange={e => setConsultantForm(f => ({ ...f, name: e.target.value }))}
+                      placeholder="Nome completo"
+                      required
+                      className="w-full rounded-xl border px-4 py-2.5 text-sm outline-none"
+                      style={{ borderColor: "rgba(91,158,201,0.25)", background: "white", color: "#1e3a4a" }}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold mb-1.5" style={{ color: "#7a9aaa" }}>E-mail</label>
+                    <input
+                      type="email"
+                      value={consultantForm.email}
+                      onChange={e => setConsultantForm(f => ({ ...f, email: e.target.value }))}
+                      placeholder="email@exemplo.com"
+                      required
+                      className="w-full rounded-xl border px-4 py-2.5 text-sm outline-none"
+                      style={{ borderColor: "rgba(91,158,201,0.25)", background: "white", color: "#1e3a4a" }}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold mb-1.5" style={{ color: "#7a9aaa" }}>Perfil</label>
+                    <select
+                      value={consultantForm.globalRole}
+                      onChange={e => setConsultantForm(f => ({ ...f, globalRole: e.target.value }))}
+                      className="w-full rounded-xl border px-4 py-2.5 text-sm outline-none"
+                      style={{ borderColor: "rgba(91,158,201,0.25)", background: "white", color: "#1e3a4a" }}
+                    >
+                      <option value="CONSULTANT">Consultor</option>
+                      <option value="ANALYST">Analista</option>
+                      <option value="OWNER">Admin</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold mb-1.5" style={{ color: "#7a9aaa" }}>Senha inicial</label>
+                    <div className="flex gap-2">
+                      <input
+                        value={consultantForm.password}
+                        onChange={e => setConsultantForm(f => ({ ...f, password: e.target.value }))}
+                        required
+                        className="flex-1 rounded-xl border px-4 py-2.5 text-sm outline-none font-mono"
+                        style={{ borderColor: "rgba(91,158,201,0.25)", background: "white", color: "#1e3a4a" }}
+                      />
+                      <button type="button" onClick={() => setConsultantForm(f => ({ ...f, password: genPassword() }))}
+                        className="btn-ghost px-3 text-xs rounded-xl">Gerar</button>
+                    </div>
+                    <p className="text-[10px] mt-1" style={{ color: "#aac0cc" }}>Guarde esta senha — não será exibida novamente.</p>
+                  </div>
+
+                  {consultantFormError && (
+                    <div className="lg:col-span-2 rounded-xl px-4 py-2.5 text-xs" style={{ background: "rgba(220,38,38,0.08)", color: "#b91c1c" }}>
+                      {consultantFormError}
+                    </div>
+                  )}
+
+                  <div className="lg:col-span-2 flex gap-3">
+                    <button type="button" onClick={() => setShowConsultantForm(false)} className="btn-ghost text-xs px-4 py-2">
+                      Cancelar
+                    </button>
+                    <button type="submit" disabled={consultantSaving} className="btn-primary text-xs px-4 py-2">
+                      {consultantSaving ? "Criando..." : "Criar consultor"}
+                    </button>
+                  </div>
+                </form>
+              </div>
+            )}
+
+            {/* Consultant list */}
+            {consultantsLoading ? (
+              <div className="space-y-3">
+                {[...Array(3)].map((_, i) => <div key={i} className="rounded-2xl p-4 animate-pulse h-16" style={{ background: "rgba(91,158,201,0.04)" }} />)}
+              </div>
+            ) : consultants.length === 0 ? (
+              <div className="rounded-2xl border border-dashed px-4 py-8 text-center text-sm" style={{ borderColor: "rgba(91,158,201,0.2)", color: "#7a9aaa" }}>
+                Nenhum consultor cadastrado.
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {consultants.map(c => (
+                  <div key={c.id} className="flex items-center gap-4 rounded-2xl p-4" style={{ background: "rgba(91,158,201,0.04)", border: "1px solid rgba(91,158,201,0.08)" }}>
+                    <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 text-white font-bold text-xs"
+                      style={{ background: CONSULTANT_ROLE_COLOR[c.globalRole] ?? "#7a9aaa" }}>
+                      {c.name.charAt(0).toUpperCase()}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="font-semibold text-sm" style={{ color: "#1e3a4a" }}>{c.name}</div>
+                      <div className="text-xs mt-0.5" style={{ color: "#aac0cc" }}>{c.email}</div>
+                    </div>
+                    <div className="text-right flex-shrink-0">
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full"
+                        style={{ background: `${CONSULTANT_ROLE_COLOR[c.globalRole]}15`, color: CONSULTANT_ROLE_COLOR[c.globalRole] }}>
+                        {CONSULTANT_ROLE_LABEL[c.globalRole]}
+                      </span>
+                      <div className="text-[10px] mt-1" style={{ color: "#aac0cc" }}>
+                        {c._count.companies} empresa{c._count.companies !== 1 ? "s" : ""}
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => handleDeleteConsultant(c.id)}
+                      disabled={deletingConsultantId === c.id}
+                      className="btn-ghost px-2 py-2 text-xs rounded-xl flex-shrink-0"
+                      style={{ color: "#aac0cc" }}
+                      title="Remover"
+                    >
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </SidebarShell>
   );
 }

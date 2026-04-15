@@ -12,7 +12,7 @@ export default function AdminPage() {
 
   useEffect(() => {
     fetch("/api/admin/stats")
-      .then(r => { if (r.status === 401 || r.status === 403) { router.push("/acesso/admin"); return null; } return r.json(); })
+      .then(r => { if (r.status === 401 || r.status === 403) { router.push("/login"); return null; } return r.json(); })
       .then(d => d && setStats(d))
       .catch(() => setError("Erro ao carregar."));
   }, [router]);

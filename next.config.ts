@@ -34,6 +34,14 @@ const nextConfig: NextConfig = {
       },
     ];
   },
+  async redirects() {
+    return [
+      { source: "/acesso/colaborador", destination: "/login", permanent: true },
+      { source: "/acesso/empresa", destination: "/login", permanent: true },
+      { source: "/acesso/admin", destination: "/login", permanent: true },
+      { source: "/consultor/login", destination: "/login", permanent: true },
+    ];
+  },
 };
 
 export default nextConfig;

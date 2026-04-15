@@ -131,7 +131,7 @@ export async function POST(req: NextRequest) {
 
     const res = NextResponse.json({
       ok: true,
-      consultant: { id: consultant.id, name: consultant.name, email: consultant.email },
+      consultant: { id: consultant.id, name: consultant.name, email: consultant.email, globalRole: consultant.globalRole },
     });
 
     res.cookies.set("access_token", accessToken, {
